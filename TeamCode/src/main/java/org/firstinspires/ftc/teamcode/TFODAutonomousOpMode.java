@@ -27,17 +27,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import java.util.List;
-import org.firstinspires.ftc.robotcore.external.ClassFactory;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
-import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
-import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
+        import com.qualcomm.hardware.bosch.BNO055IMU;
+        import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+        import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+        import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+        import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+        import com.qualcomm.robotcore.hardware.DcMotor;
+        import com.qualcomm.robotcore.util.Range;
+
+        import java.util.List;
+        import org.firstinspires.ftc.robotcore.external.ClassFactory;
+        import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+        import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+        import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+        import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+        import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
+        import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 
 /**
  * This 2020-2021 OpMode illustrates the basics of using the TensorFlow Object Detection API to
@@ -49,12 +56,40 @@ import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
  * IMPORTANT: In order to use this OpMode, you need to obtain your own Vuforia license key as
  * is explained below.
  */
-@TeleOp(name = "Concept: TensorFlow Object Detection Webcam", group = "Concept")
-@Disabled
-public class ConceptTensorFlowObjectDetectionWebcam extends LinearOpMode {
+@Autonomous
+public class TFODAutonomousOpMode extends LinearOpMode {
     private static final String TFOD_MODEL_ASSET = "UltimateGoal.tflite";
     private static final String LABEL_FIRST_ELEMENT = "Quad";
     private static final String LABEL_SECOND_ELEMENT = "Single";
+
+    public double FL_power_raw;
+    public double FR_power_raw;
+    public double RL_power_raw;
+    public double RR_power_raw;
+    public double FL_power;
+    public double FR_power;
+    public double RL_power;
+    public double RR_power;
+
+    public double newForward;
+    public double newStrafe;
+
+    private BNO055IMU imu;
+    private DcMotor frTest;
+    private DcMotor rrTest;
+    private DcMotor flTest;
+    private DcMotor rlTest;
+
+    // State used for updating telemetry
+    public Orientation lastAngles;
+    public Orientation angles;
+    public double globalAngle;
+
+    public double objectHeight;
+    public double objectAngle;
+    public double distanceRatio;
+
+    public double[] globalCorrections;
 
     /*
      * IMPORTANT: You need to obtain your own license key to use Vuforia. The string below with which
@@ -69,7 +104,7 @@ public class ConceptTensorFlowObjectDetectionWebcam extends LinearOpMode {
      * and paste it in to your code on the next line, between the double quotes.
      */
     private static final String VUFORIA_KEY =
-            " -- YOUR NEW VUFORIA KEY GOES HERE  --- ";
+            "AWSx8k3/////AAABmaBd5ixXmELkkXK3PPS3pLdFBbVCgCJdrseBobvktZkro9TIqInOh1ptCOPFH6q9gMs1J7i5Bh5iBB4RwcdU8AYuatBmouyPYCFRTh3uaWt4e7+1ZYQedA0AsHderCn2dKfyvR6u6uxM5bqP1smbOTCdR99CB7WHA5Sw7VA0I31gB4FqumV+OGjPhCYtP9sqBZu03ClYBr/r9De8SqMl/fHVgF9QTBxLf7sCpGMTPQ9ZweG5hrKQ10zemAz/7nNT8Zq8cDMzZzBdKH6X07n1j+biKmVfgzTXtUOGQnBsjU5zJRspvWSQldeQmgnaSGZixnOvH+Cu7G1Mff3yKHcwdI24GP+2UDisOhkXbJ6AOYQJ";
 
     /**
      * {@link #vuforia} is the variable we will use to store our instance of the Vuforia
@@ -85,6 +120,23 @@ public class ConceptTensorFlowObjectDetectionWebcam extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "AdafruitIMUCalibration.json"; // see the calibration sample op mode
+        parameters.mode = BNO055IMU.SensorMode.IMU;
+        // parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+        frTest = hardwareMap.get(DcMotor.class, "frMotor");
+        rrTest = hardwareMap.get(DcMotor.class, "rrMotor");
+        flTest = hardwareMap.get(DcMotor.class, "flMotor");
+        rlTest = hardwareMap.get(DcMotor.class, "rlMotor");
+
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
+        imu.startAccelerationIntegration(null, null, 1000);
+
         // The TFObjectDetector uses the camera frames from the VuforiaLocalizer, so we create that
         // first.
         initVuforia();
@@ -115,30 +167,79 @@ public class ConceptTensorFlowObjectDetectionWebcam extends LinearOpMode {
 
         if (opModeIsActive()) {
             while (opModeIsActive()) {
-                if (tfod != null) {
-                    // getUpdatedRecognitions() will return null if no new information is available since
-                    // the last time that call was made.
-                    List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                    if (updatedRecognitions != null) {
-                      telemetry.addData("# Object Detected", updatedRecognitions.size());
-                      // step through the list of recognitions and display boundary info.
-                      int i = 0;
-                      for (Recognition recognition : updatedRecognitions) {
-                        telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
-                        telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
-                                recognition.getLeft(), recognition.getTop());
-                        telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
-                                recognition.getRight(), recognition.getBottom());
-                      }
-                      telemetry.update();
-                    }
-                }
+                controls();
             }
         }
 
         if (tfod != null) {
             tfod.shutdown();
         }
+    }
+
+    public void controls() {
+        if (tfod != null) {
+            // getUpdatedRecognitions() will return null if no new information is available since
+            // the last time that call was made.
+            List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+            if (updatedRecognitions != null) {
+                telemetry.addData("Object List", updatedRecognitions);
+                telemetry.addData("# Object Detected", updatedRecognitions.size());
+                // step through the list of recognitions and display boundary info.
+                int i = 0;
+                for (Recognition recognition : updatedRecognitions) {
+                    if (recognition.getLabel() == "Single") {
+                        double objectHeight = recognition.getTop() - recognition.getBottom();
+                        double distanceRatio = objectHeight / recognition.getImageHeight();
+
+                        double objectAngle = recognition.estimateAngleToObject(AngleUnit.RADIANS);
+
+                        telemetry.addData("Estimated Angle to:", objectAngle);
+
+                        holonomicFormula(distanceRatio, objectAngle);
+                        setDriveChainPower();
+
+                        telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
+                        telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
+                                recognition.getLeft(), recognition.getTop());
+                        telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
+                                recognition.getRight(), recognition.getBottom());
+                    }
+                }
+                telemetry.update();
+            } else {
+                objectHeight = 0;
+                distanceRatio = 0;
+
+                objectAngle = 0;
+
+                holonomicFormula(distanceRatio, objectAngle);
+                setDriveChainPower();
+            }
+        }
+    }
+
+    public void holonomicFormula(double distanceRatio, double objectAngle)
+    {
+        double distanceGain = 1;
+        double angleGain = 0.45;
+
+        FL_power_raw = (distanceGain*distanceRatio) + (-angleGain*objectAngle);
+        FR_power_raw = (distanceGain*distanceRatio) + (angleGain*objectAngle);
+        RL_power_raw = (distanceGain*distanceRatio) + (-angleGain*objectAngle);
+        RR_power_raw = (distanceGain*distanceRatio) + (angleGain*objectAngle);
+
+        FL_power = Range.clip(FL_power_raw, -1, 1);
+        FR_power = Range.clip(FR_power_raw, -1, 1);
+        RL_power = Range.clip(RL_power_raw,-1 ,1);
+        RR_power = Range.clip(RR_power_raw, -1, 1);
+    }
+
+    public void setDriveChainPower() //double angleCorrection, double[] motorCorrections)
+    {
+        flTest.setPower(FL_power); //+angleCorrection+motorCorrections[0]);
+        frTest.setPower(-FR_power); //-angleCorrection+motorCorrections[1]);
+        rlTest.setPower(RL_power); // +angleCorrection+motorCorrections[2]);
+        rrTest.setPower(-RR_power); //-angleCorrection+motorCorrections[3]);
     }
 
     /**
@@ -164,10 +265,10 @@ public class ConceptTensorFlowObjectDetectionWebcam extends LinearOpMode {
      */
     private void initTfod() {
         int tfodMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
-            "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+                "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
-       tfodParameters.minResultConfidence = 0.6f;
-       tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
-       tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_FIRST_ELEMENT, LABEL_SECOND_ELEMENT);
+        tfodParameters.minResultConfidence = 0.6f;
+        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
+        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_FIRST_ELEMENT, LABEL_SECOND_ELEMENT);
     }
 }
