@@ -4,6 +4,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -37,12 +38,27 @@ public class MecanumWithGyroOpMode extends LinearOpMode
     private DcMotor flTest;
     private DcMotor rlTest;
 
+    public double[] globalDeltas;
+
     // State used for updating telemetry
     public Orientation lastAngles;
     public Orientation angles;
     public double globalAngle;
-    
-    public double[] globalCorrections;
+
+    public double[] globalCorrections = new double[4];
+
+    enum EncoderReadStatus {
+        current,
+        calculate
+    }
+
+    public EncoderReadStatus readStatus = EncoderReadStatus.current;
+    ElapsedTime eTime = new ElapsedTime();
+
+    public double flcurrent;
+    public double frcurrent;
+    public double rlcurrent;
+    public double rrcurrent;
 
     @Override
     public void runOpMode()
@@ -64,8 +80,6 @@ public class MecanumWithGyroOpMode extends LinearOpMode
 
         imu.startAccelerationIntegration(null, null, 1000);
 
-        Thread EncoderThread = new EncoderThread();
-
         telemetry.addData("Mode", "waiting for start");
         telemetry.update();
 
@@ -73,9 +87,7 @@ public class MecanumWithGyroOpMode extends LinearOpMode
         waitForStart();
 
         telemetry.addData("Mode", "running");
-        EncoderThread.start();
         telemetry.update();
-        sleep(1500);
 
         while (opModeIsActive())
         {
@@ -89,6 +101,7 @@ public class MecanumWithGyroOpMode extends LinearOpMode
         double angleCorrection = checkDirection();
         // double XaccelCorrection = checkXAcceleration();
         // double ZaccelCorrection = checkZAcceleration();
+        EncoderRead();
 
         holonomicFormula();
         setDriveChainPower(angleCorrection, globalCorrections);
@@ -195,66 +208,51 @@ public class MecanumWithGyroOpMode extends LinearOpMode
     }
     */
 
-    public class EncoderThread extends Thread
-    {
-        public void run()
-        {
-            telemetry.addData("EncoderThreadStatus", "running");
-            
-            correctionMethod();
-        }
-        public void correctionMethod() 
-        {
-            while (Thread.currentThread().isAlive()) {
-                double[] motorDeltas = motorDeltas();
-                getCorrections(motorDeltas);
-            }
-        }
-        public double[] motorDeltas()
-        {
+    public void EncoderRead() {
+        switch (readStatus) {
+            case current:
+                double flcurrent = flTest.getCurrentPosition();
+                double frcurrent = frTest.getCurrentPosition();
+                double rlcurrent = rlTest.getCurrentPosition();
+                double rrcurrent = rrTest.getCurrentPosition();
 
-            double flcurrent = flTest.getCurrentPosition();
-            double frcurrent = frTest.getCurrentPosition();
-            double rlcurrent = rlTest.getCurrentPosition();
-            double rrcurrent = rrTest.getCurrentPosition();
+                if (eTime.time() > 0.1) {
+                    double flnew = flTest.getCurrentPosition();
+                    double frnew = frTest.getCurrentPosition();
+                    double rlnew = rlTest.getCurrentPosition();
+                    double rrnew = rrTest.getCurrentPosition();
 
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+                    double fldelta = flnew - flcurrent;
+                    double frdelta = frnew - frcurrent;
+                    double rldelta = rlnew - rlcurrent;
+                    double rrdelta = rrnew - rrcurrent;
 
-            double flnew = flTest.getCurrentPosition();
-            double frnew = frTest.getCurrentPosition();
-            double rlnew = rlTest.getCurrentPosition();
-            double rrnew = rrTest.getCurrentPosition();
+                    double[] motorDeltas = {fldelta, frdelta, rldelta, rrdelta};
+                    telemetry.addData("MotorDeltas", motorDeltas);
+                    // telemetry.update();
+                    globalDeltas = motorDeltas;
+                    readStatus = EncoderReadStatus.calculate;
 
-            double fldelta = flnew - flcurrent;
-            double frdelta = frnew - frcurrent;
-            double rldelta = rlnew - rlcurrent;
-            double rrdelta = rrnew - rrcurrent;
+                    eTime.reset();
+                }
+                break;
+            case calculate:
+                double flcorrection = -globalDeltas[0];
+                double frcorrection = -globalDeltas[1];
+                double rlcorrection = -globalDeltas[2];
+                double rrcorrection = -globalDeltas[3];
 
-            double[] motorDeltas = {fldelta, frdelta, rldelta, rrdelta};
-            telemetry.addData("MotorDeltas", fldelta);
-            // telemetry.update();
-            return motorDeltas;
-        }
-        public void getCorrections(double[] motorDeltas) {
-            double flcorrection = -motorDeltas[0];
-            double frcorrection = -motorDeltas[1];
-            double rlcorrection = -motorDeltas[2];
-            double rrcorrection = -motorDeltas[3];
+                double gain = 0.0075;
+                if (gamepad1.left_stick_x == 0 && gamepad1.left_stick_y == 0) {
+                    double flpower = flcorrection * gain;
+                    double frpower = frcorrection * gain;
+                    double rlpower = rlcorrection * gain;
+                    double rrpower = rrcorrection * gain;
 
-            double gain = 0.0075;
-            if (gamepad1.left_stick_x == 0 && gamepad1.left_stick_y == 0) {
-                double flpower = flcorrection * gain;
-                double frpower = frcorrection * gain;
-                double rlpower = rlcorrection * gain;
-                double rrpower = rrcorrection * gain;
-
-                double[] motorCorrections = {flpower, frpower, rlpower, rrpower};
-                globalCorrections = motorCorrections;
-            }
+                    globalCorrections = new double[]{flpower, frpower, rlpower, rrpower};
+                }
+                readStatus = EncoderReadStatus.current;
+                eTime.reset();
         }
     }
 
@@ -278,10 +276,10 @@ public class MecanumWithGyroOpMode extends LinearOpMode
     {
         getJoyValues();
 
-        FL_power_raw = newForward - newStrafe - rightStickX;
-        FR_power_raw = newForward + newStrafe + rightStickX;
-        RL_power_raw = newForward + newStrafe - rightStickX;
-        RR_power_raw = newForward - newStrafe + rightStickX;
+        FL_power_raw = -newForward - newStrafe + rightStickX;
+        FR_power_raw = -newForward + newStrafe - rightStickX;
+        RL_power_raw = newForward + newStrafe + rightStickX;
+        RR_power_raw = newForward - newStrafe - rightStickX;
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -291,8 +289,8 @@ public class MecanumWithGyroOpMode extends LinearOpMode
 
     public void setDriveChainPower(double angleCorrection, double[] motorCorrections)
     {
-        flTest.setPower(FL_power+angleCorrection+motorCorrections[0]);
-        frTest.setPower(-FR_power-angleCorrection+motorCorrections[1]);
+        flTest.setPower(-FL_power+angleCorrection+motorCorrections[0]);
+        frTest.setPower(FR_power-angleCorrection+motorCorrections[1]);
         rlTest.setPower(RL_power+angleCorrection+motorCorrections[2]);
         rrTest.setPower(-RR_power-angleCorrection+motorCorrections[3]);
     }

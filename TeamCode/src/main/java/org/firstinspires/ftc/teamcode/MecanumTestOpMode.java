@@ -94,10 +94,10 @@ public class MecanumTestOpMode extends LinearOpMode
     {
         getJoyValues();
 
-        FL_power_raw = newForward - newStrafe - rightStickX;
-        FR_power_raw = newForward + newStrafe + rightStickX;
-        RL_power_raw = newForward + newStrafe - rightStickX;
-        RR_power_raw = newForward - newStrafe + rightStickX;
+        FL_power_raw = -newForward - newStrafe + rightStickX;
+        FR_power_raw = -newForward + newStrafe - rightStickX;
+        RL_power_raw = newForward + newStrafe + rightStickX;
+        RR_power_raw = newForward - newStrafe - rightStickX;
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -107,8 +107,8 @@ public class MecanumTestOpMode extends LinearOpMode
 
     public void setDriveChainPower()
     {
-        flTest.setPower(FL_power);
-        frTest.setPower(-FR_power);
+        flTest.setPower(-FL_power);
+        frTest.setPower(FR_power);
         rlTest.setPower(RL_power);
         rrTest.setPower(-RR_power);
     }
