@@ -28,9 +28,6 @@ public class Drivetrain {
 
     private double newForward, newStrafe;
 
-    private double[] globalDeltas;
-    private double[] globalCorrections = new double[4];
-
     enum EncoderReadStatus {
         current,
         calculate
@@ -59,7 +56,7 @@ public class Drivetrain {
         rlMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rrMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        FL_reader = new EncoderReader(flMotor);
+        FL_reader = new EncoderReader(flMotor, 537.6, 0.1);
 
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
@@ -73,7 +70,7 @@ public class Drivetrain {
         telemetry.addData("RPMs", rpms);
 
         holonomicFormula();
-        setDriveChainPower(globalCorrections);
+        setDriveChainPower();
     }
 
     public void drive(double g1lx, double g1ly, double g1rx, boolean g1lbutton, Telemetry telemetry) {
@@ -86,57 +83,6 @@ public class Drivetrain {
 
         controls();
     }
-
-    /*
-    public void EncoderRead() {
-        switch (readStatus) {
-            case current:
-                double flcurrent = flMotor.getCurrentPosition();
-                double frcurrent = frMotor.getCurrentPosition();
-                double rlcurrent = rlMotor.getCurrentPosition();
-                double rrcurrent = rrMotor.getCurrentPosition();
-
-                if (eTime.time() > 0.1) {
-                    double flnew = flMotor.getCurrentPosition();
-                    double frnew = frMotor.getCurrentPosition();
-                    double rlnew = rlMotor.getCurrentPosition();
-                    double rrnew = rrMotor.getCurrentPosition();
-
-                    double fldelta = flnew - flcurrent;
-                    double frdelta = frnew - frcurrent;
-                    double rldelta = rlnew - rlcurrent;
-                    double rrdelta = rrnew - rrcurrent;
-
-                    double[] motorDeltas = {fldelta, frdelta, rldelta, rrdelta};
-                    telemetry.addData("MotorDeltas", motorDeltas.toString());
-                    // telemetry.update();
-                    globalDeltas = motorDeltas;
-                    readStatus = EncoderReadStatus.calculate;
-
-                    eTime.reset();
-                }
-                break;
-            case calculate:
-                double flcorrection = -globalDeltas[0];
-                double frcorrection = -globalDeltas[1];
-                double rlcorrection = -globalDeltas[2];
-                double rrcorrection = -globalDeltas[3];
-
-                double gain = 0.0075;
-                if (this.g1lx == 0 && this.g1ly == 0) {
-                    double flpower = flcorrection * gain;
-                    double frpower = frcorrection * gain;
-                    double rlpower = rlcorrection * gain;
-                    double rrpower = rrcorrection * gain;
-
-                    double[] motorCorrections = {flpower, frpower, rlpower, rrpower};
-                    globalCorrections = motorCorrections;
-                }
-                readStatus = EncoderReadStatus.current;
-                eTime.reset();
-        }
-    }
-    */
 
     public void getJoyValues()
     {
@@ -172,11 +118,11 @@ public class Drivetrain {
         }
     }
 
-    public void setDriveChainPower(double[] motorCorrections)
+    public void setDriveChainPower()
     {
-        flMotor.setPower(-FL_power+motorCorrections[0]);
-        frMotor.setPower(FR_power+motorCorrections[1]);
-        rlMotor.setPower(RL_power+motorCorrections[2]);
-        rrMotor.setPower(-RR_power+motorCorrections[3]);
+        flMotor.setPower(FL_power);
+        frMotor.setPower(-FR_power);
+        rlMotor.setPower(RL_power);
+        rrMotor.setPower(-RR_power);
     }
 }

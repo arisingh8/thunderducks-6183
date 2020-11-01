@@ -16,9 +16,6 @@ public class Shooter {
     private double g1rt;
     private boolean g1ab;
 
-    public double flywheel_power_raw;
-    private double flywheel_power;
-
     private EncoderReader flywheel_reader;
 
     ElapsedTime eTime = new ElapsedTime();
@@ -27,8 +24,10 @@ public class Shooter {
         flywheel = hardwareMap.get(DcMotor.class, "frMotor");
         servo = hardwareMap.get(Servo.class, "servo");
 
-        flywheel_reader = new EncoderReader(flywheel);
+        flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
         servo.setPosition(0);
+
+        eTime.reset();
     }
 
     public void controls() {
