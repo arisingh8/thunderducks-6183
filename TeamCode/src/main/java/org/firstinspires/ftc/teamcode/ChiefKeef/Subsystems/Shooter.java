@@ -19,15 +19,17 @@ public class Shooter {
     private EncoderReader flywheel_reader;
 
     ElapsedTime eTime = new ElapsedTime();
+    ElapsedTime restTime = new ElapsedTime();
 
     public void init(HardwareMap hardwareMap) {
-        flywheel = hardwareMap.get(DcMotor.class, "frMotor");
+        flywheel = hardwareMap.get(DcMotor.class, "flywheel");
         servo = hardwareMap.get(Servo.class, "servo");
 
         flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
-        servo.setPosition(0);
+        servo.setPosition(0.15);
 
         eTime.reset();
+        restTime.reset();
     }
 
     public void controls() {
@@ -49,12 +51,16 @@ public class Shooter {
     public void launchEm(double rpm) {
         flywheel.setPower(g1rt);
 
-        if (rpm > 5500 || g1ab) {
-            servo.setPosition(0.44);
-            if (eTime.time() > 0.5) {
-                servo.setPosition(0);
+        if (rpm > 5500 && eTime.time() > 0.125) {
+            servo.setPosition(0.4);
+            if (eTime.time() > 0.25) {
+                servo.setPosition(0.15);
                 eTime.reset();
             }
+        }
+
+        if (rpm < 5500) {
+            servo.setPosition(0.15);
         }
     }
 }
