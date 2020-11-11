@@ -28,14 +28,8 @@ public class Drivetrain {
 
     private double newForward, newStrafe;
 
-    enum EncoderReadStatus {
-        current,
-        calculate
-    }
-
     private EncoderReader FL_reader;
 
-    public EncoderReadStatus readStatus = EncoderReadStatus.current;
     ElapsedTime eTime = new ElapsedTime();
     
     public void init(HardwareMap hardwareMap) {
@@ -122,7 +116,7 @@ public class Drivetrain {
     {
         flMotor.setPower(FL_power);
         frMotor.setPower(-FR_power);
-        rlMotor.setPower(RL_power);
-        rrMotor.setPower(-RR_power);
+        rlMotor.setPower(-RL_power);
+        rrMotor.setPower(RR_power);
     }
 }
