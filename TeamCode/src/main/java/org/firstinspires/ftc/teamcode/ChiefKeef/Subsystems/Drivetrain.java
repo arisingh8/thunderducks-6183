@@ -29,8 +29,6 @@ public class Drivetrain {
     private double newForward, newStrafe;
 
     private EncoderReader FL_reader;
-
-    ElapsedTime eTime = new ElapsedTime();
     
     public void init(HardwareMap hardwareMap) {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
@@ -78,26 +76,24 @@ public class Drivetrain {
         controls();
     }
 
-    public void getJoyValues()
-    {
+    public void getJoyValues() {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         float pi = 3.1415926f;
 
         float gyro_degrees = angles.firstAngle;
         float gyro_radians = gyro_degrees * pi/180;
-        newForward = this.g1ly * Math.cos(gyro_radians) + this.g1lx * Math.sin(gyro_radians);
-        newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
+        newForward = this.g1ly * Math.cos(gyro_radians) + this.g1rx * Math.sin(gyro_radians);
+        newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1rx * Math.cos(gyro_radians);
     }
 
-    public void holonomicFormula()
-    {
+    public void holonomicFormula() {
         getJoyValues();
 
-        FL_power_raw = -newForward - newStrafe + this.g1rx;
-        FR_power_raw = -newForward + newStrafe - this.g1rx;
-        RL_power_raw = newForward + newStrafe + this.g1rx;
-        RR_power_raw = newForward - newStrafe - this.g1rx;
+        FL_power_raw = -newForward - newStrafe + this.g1lx;
+        FR_power_raw = -newForward + newStrafe - this.g1lx;
+        RL_power_raw = newForward + newStrafe + this.g1lx;
+        RR_power_raw = newForward - newStrafe - this.g1lx;
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -112,11 +108,10 @@ public class Drivetrain {
         }
     }
 
-    public void setDriveChainPower()
-    {
+    public void setDriveChainPower() {
         flMotor.setPower(FL_power);
         frMotor.setPower(-FR_power);
-        rlMotor.setPower(-RL_power);
-        rrMotor.setPower(RR_power);
+        rlMotor.setPower(RL_power);
+        rrMotor.setPower(-RR_power);
     }
 }
