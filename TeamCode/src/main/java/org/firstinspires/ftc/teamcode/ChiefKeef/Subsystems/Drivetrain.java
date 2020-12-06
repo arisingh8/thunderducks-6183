@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.ChiefKeef.Subsystems;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -20,8 +19,6 @@ public class Drivetrain {
 
     private double g1lx = 0, g1ly = 0, g1rx = 0;
     private boolean g1lbutton;
-
-    private Orientation angles;
 
     public double FL_power_raw, FR_power_raw, RL_power_raw, RR_power_raw;
     private double FL_power, FR_power, RL_power, RR_power;
@@ -76,24 +73,26 @@ public class Drivetrain {
         controls();
     }
 
-    public void getJoyValues() {
-        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+    public void getJoyValues()
+    {
+        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         float pi = 3.1415926f;
 
         float gyro_degrees = angles.firstAngle;
         float gyro_radians = gyro_degrees * pi/180;
-        newForward = this.g1ly * Math.cos(gyro_radians) + this.g1rx * Math.sin(gyro_radians);
-        newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1rx * Math.cos(gyro_radians);
+        newForward = this.g1ly * Math.cos(gyro_radians) + this.g1lx * Math.sin(gyro_radians);
+        newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
     }
 
-    public void holonomicFormula() {
+    public void holonomicFormula()
+    {
         getJoyValues();
 
-        FL_power_raw = -newForward - newStrafe + this.g1lx;
-        FR_power_raw = -newForward + newStrafe - this.g1lx;
-        RL_power_raw = newForward + newStrafe + this.g1lx;
-        RR_power_raw = newForward - newStrafe - this.g1lx;
+        FL_power_raw = -newForward + newStrafe + this.g1rx;
+        FR_power_raw = -newForward - newStrafe - this.g1rx;
+        RL_power_raw = newForward - newStrafe + this.g1rx;
+        RR_power_raw = newForward + newStrafe - this.g1rx;
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -108,10 +107,11 @@ public class Drivetrain {
         }
     }
 
-    public void setDriveChainPower() {
+    public void setDriveChainPower()
+    {
         flMotor.setPower(FL_power);
         frMotor.setPower(-FR_power);
-        rlMotor.setPower(RL_power);
-        rrMotor.setPower(-RR_power);
+        rlMotor.setPower(-RL_power);
+        rrMotor.setPower(RR_power);
     }
 }

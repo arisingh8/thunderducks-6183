@@ -32,8 +32,14 @@ public class Shooter {
     ShooterTargetingPipeline pipeline;
     boolean onTarget;
 
-    ElapsedTime eTime = new ElapsedTime();
-    ElapsedTime restTime = new ElapsedTime();
+    public ElapsedTime eTime = new ElapsedTime();
+
+    public enum firePos {
+        READY,
+        FIRING,
+        WAITING
+    }
+    firePos servoState = firePos.READY;
 
     public void init(HardwareMap hardwareMap) {
         flywheel = hardwareMap.get(DcMotor.class, "flywheel");
@@ -52,11 +58,12 @@ public class Shooter {
                 webcam.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
             }
         });
-        flywheel_reader = new EncoderReader(flywheel, 28, 0.05);
+        flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
         servo.setPosition(0.15);
 
+        flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         eTime.reset();
-        restTime.reset();
     }
 
     public void controls() {
@@ -86,10 +93,37 @@ public class Shooter {
     public void launchEm(double rpm) {
         double newPower = 0;
         if(g1rt > 0.5) {
-            newPower = -(tRevs + rpm);
+            flywheel.setPower(-0.95);
+            // newPower = -(tRevs + rpm);
+        } else {
+            flywheel.setPower(0);
         }
-        flywheel.setPower(newPower);
+        /*
+        if (newPower < -0.3) {
+            newPower = -0.3;
+        }
+        */
 
+        switch (servoState) {
+            case READY:
+                if (-rpm > tRevs) {
+                    eTime.reset();
+                    servo.setPosition(0.3);
+                    servoState = firePos.FIRING;
+                }
+                break;
+            case FIRING:
+                if (eTime.time() > 0.5) {
+                    servo.setPosition(0);
+                    servoState = firePos.WAITING;
+                }
+                break;
+            case WAITING:
+                if (eTime.time() > 0.75) {
+                    servoState = firePos.READY;
+                }
+                break;
+        }
         /*
         if (eTime.time() > 0.125) {
             servo.setPosition(0.4);

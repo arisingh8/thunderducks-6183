@@ -276,10 +276,10 @@ public class MecanumWithGyroOpMode extends LinearOpMode
     {
         getJoyValues();
 
-        FL_power_raw = -newForward - newStrafe + rightStickX;
-        FR_power_raw = -newForward + newStrafe - rightStickX;
-        RL_power_raw = newForward + newStrafe + rightStickX;
-        RR_power_raw = newForward - newStrafe - rightStickX;
+        FL_power_raw = -newForward + newStrafe + rightStickX;
+        FR_power_raw = -newForward - newStrafe - rightStickX;
+        RL_power_raw = newForward - newStrafe + rightStickX;
+        RR_power_raw = newForward + newStrafe - rightStickX;
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -289,9 +289,9 @@ public class MecanumWithGyroOpMode extends LinearOpMode
 
     public void setDriveChainPower(double angleCorrection, double[] motorCorrections)
     {
-        flTest.setPower(-FL_power+angleCorrection+motorCorrections[0]);
-        frTest.setPower(FR_power-angleCorrection+motorCorrections[1]);
-        rlTest.setPower(RL_power+angleCorrection+motorCorrections[2]);
-        rrTest.setPower(-RR_power-angleCorrection+motorCorrections[3]);
+        flTest.setPower(FL_power);
+        frTest.setPower(-FR_power);
+        rlTest.setPower(-RL_power);
+        rrTest.setPower(RR_power);
     }
 }
