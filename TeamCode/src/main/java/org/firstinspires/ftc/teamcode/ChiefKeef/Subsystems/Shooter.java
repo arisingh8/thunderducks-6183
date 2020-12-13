@@ -70,13 +70,6 @@ public class Shooter {
         // EncoderRead();
         double rpm = flywheel_reader.readCycle();
         telemetry.addData("Shooter RPM", rpm);
-        if (pipeline.getAvgResults() == 112) {
-            onTarget = true;
-        } else {
-            onTarget = false;
-        }
-        telemetry.addData("On target?", onTarget);
-        telemetry.addData("avg1", pipeline.getAvgResults());
 
         launchEm(rpm);
     }
