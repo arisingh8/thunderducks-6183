@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef.Robot;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -17,6 +18,7 @@ public class MainBot extends OpMode {
 
     FtcDashboard dashboard = FtcDashboard.getInstance();
     Telemetry dashboardTelemetry = dashboard.getTelemetry();
+    MultipleTelemetry multiTelemetry = new MultipleTelemetry(telemetry, dashboardTelemetry);
 
     boolean oldg1y = false;
     boolean run = false;
@@ -31,9 +33,9 @@ public class MainBot extends OpMode {
 
     @Override
     public void loop() {
-        shooter.shoot(gamepad1.right_trigger, gamepad1.a, 5400, dashboardTelemetry);
-        intake.intake(gamepad1.b, dashboardTelemetry);
-        wobbleGoalArm.pickUp(gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, dashboardTelemetry);
+        shooter.shoot(gamepad1.right_trigger, gamepad1.a, 5400, multiTelemetry);
+        intake.intake(gamepad1.b, multiTelemetry);
+        wobbleGoalArm.pickUp(gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, multiTelemetry);
 
         if (gamepad1.y && !oldg1y) {
             run = !run;
@@ -42,12 +44,12 @@ public class MainBot extends OpMode {
 
         if (run) {
             if (!shooter.isOnTarget()) {
-                drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, true, dashboardTelemetry);
+                drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.x, true, multiTelemetry);
             }
         } else {
-            drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, false, dashboardTelemetry);
+            drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.x, false, multiTelemetry);
         }
 
-        dashboardTelemetry.update();
+        multiTelemetry.update();
     }
 }
