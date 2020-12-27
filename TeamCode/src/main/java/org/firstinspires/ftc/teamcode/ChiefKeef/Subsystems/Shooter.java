@@ -30,7 +30,7 @@ public class Shooter {
 
     OpenCvCamera webcam;
     ShooterTargetingPipeline pipeline;
-    boolean onTarget;
+    public boolean onTarget;
 
     public ElapsedTime eTime = new ElapsedTime();
 
@@ -70,13 +70,6 @@ public class Shooter {
         // EncoderRead();
         double rpm = flywheel_reader.readCycle();
         telemetry.addData("Shooter RPM", rpm);
-        if (pipeline.getAvgResults() == 112) {
-            onTarget = true;
-        } else {
-            onTarget = false;
-        }
-        telemetry.addData("On target?", onTarget);
-        telemetry.addData("avg1", pipeline.getAvgResults());
 
         launchEm(rpm);
     }
@@ -90,25 +83,23 @@ public class Shooter {
         controls();
     }
 
+    public boolean isOnTarget() {
+        onTarget = pipeline.targeting();
+        return onTarget;
+    }
+
     public void launchEm(double rpm) {
-        double newPower = 0;
         if(g1rt > 0.5) {
-            flywheel.setPower(-0.95);
-            // newPower = -(tRevs + rpm);
+            flywheel.setPower(-0.98);
         } else {
             flywheel.setPower(0);
         }
-        /*
-        if (newPower < -0.3) {
-            newPower = -0.3;
-        }
-        */
 
         switch (servoState) {
             case READY:
                 if (-rpm > tRevs) {
                     eTime.reset();
-                    servo.setPosition(0.3);
+                    servo.setPosition(0.5);
                     servoState = firePos.FIRING;
                 }
                 break;
@@ -124,42 +115,5 @@ public class Shooter {
                 }
                 break;
         }
-        /*
-        if (eTime.time() > 0.125) {
-            servo.setPosition(0.4);
-            if (eTime.time() > 0.25) {
-                servo.setPosition(0.15);
-                eTime.reset();
-            }
-        }
-
-        if (rpm > -tRevs) {
-            servo.setPosition(0.15);
-        }
-        */
-
-
-/*
-        flywheel.setPower(-g1rt);
-
-        if (rpm < -tRevs) {
-            double newPower = (-(tRevs+0) - rpm - 50)/50;
-
-            if(-rpm < tRevs){newPower = 1;}
-            else{newPower = 0.8;}
-            if (newPower > 1) { newPower = 1; }
-            flywheel.setPower(-g1rt+newPower);
-            if (eTime.time() > 0.125) {
-                servo.setPosition(0.4);
-                if (eTime.time() > 0.25) {
-                    servo.setPosition(0.15);
-                    eTime.reset();
-                }
-            }
- */
-
-
-
-
     }
 }

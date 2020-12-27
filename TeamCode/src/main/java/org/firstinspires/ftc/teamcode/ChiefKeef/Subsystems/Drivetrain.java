@@ -10,6 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import org.firstinspires.ftc.robotcore.internal.usb.exception.RobotUsbWriteLockException;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
 
 public class Drivetrain {
@@ -18,7 +19,13 @@ public class Drivetrain {
     private Telemetry telemetry;
 
     private double g1lx = 0, g1ly = 0, g1rx = 0;
-    private boolean g1lbutton;
+    private boolean g1lbumper;
+
+    private double P = 0.1;
+    private double I = 0.01;
+    private double D = 0.001;
+
+    private double integral, previous_error = 0;
 
     public double FL_power_raw, FR_power_raw, RL_power_raw, RR_power_raw;
     private double FL_power, FR_power, RL_power, RR_power;
@@ -26,6 +33,12 @@ public class Drivetrain {
     private double newForward, newStrafe;
 
     private EncoderReader FL_reader;
+
+    private double z;
+    private double desiredAngle;
+
+    private Orientation angles;
+    private double angleDelta;
     
     public void init(HardwareMap hardwareMap) {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
@@ -58,24 +71,33 @@ public class Drivetrain {
         double rpms = FL_reader.readCycle();
         telemetry.addData("RPMs", rpms);
 
-        holonomicFormula();
+        holonomicFormula(false);
         setDriveChainPower();
     }
 
-    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lbutton, Telemetry telemetry) {
+    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lbumper, boolean turn, Telemetry telemetry) {
         this.g1lx = g1lx;
         this.g1ly = g1ly;
         this.g1rx = g1rx;
-        this.g1lbutton = g1lbutton;
+        this.g1lbumper = g1lbumper;
 
         this.telemetry = telemetry;
 
-        controls();
+        if (!turn) {
+            controls();
+        } else {
+            turn();
+        }
+    }
+
+    public void turn() {
+        holonomicFormula(true);
+        setDriveChainPower();
     }
 
     public void getJoyValues()
     {
-        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         float pi = 3.1415926f;
 
@@ -85,25 +107,47 @@ public class Drivetrain {
         newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
     }
 
-    public void holonomicFormula()
-    {
-        getJoyValues();
+    public void holonomicFormula(boolean turn) {
+        double gain = 4;
+        if (!turn) {
+            getJoyValues();
 
-        FL_power_raw = -newForward + newStrafe + this.g1rx;
-        FR_power_raw = -newForward - newStrafe - this.g1rx;
-        RL_power_raw = newForward - newStrafe + this.g1rx;
-        RR_power_raw = newForward + newStrafe - this.g1rx;
+            desiredAngle = desiredAngle + -(gain * g1rx);
+            angleDelta = desiredAngle - angles.firstAngle;
 
-        FL_power = Range.clip(FL_power_raw, -1, 1);
-        FR_power = Range.clip(FR_power_raw, -1, 1);
-        RL_power = Range.clip(RL_power_raw,-1 ,1);
-        RR_power = Range.clip(RR_power_raw, -1, 1);
+            integral += (angleDelta*.02); // Integral is increased by the error*time (which is .02 seconds using normal IterativeRobot)
+            double derivative = (angleDelta - previous_error) / .02;
+            double rcw = P*angleDelta + I*integral + D*derivative;
 
-        if (this.g1lbutton) {
-            FL_power /= 4;
-            FR_power /= 4;
-            RL_power /= 4;
-            RR_power /= 4;
+            rcw = -rcw;
+            previous_error = angleDelta;
+
+            telemetry.addData("Read angle", angles.firstAngle);
+            telemetry.addData("Desired Angle", desiredAngle);
+
+            // z = -(angleDelta * 0.1);
+
+            FL_power_raw = -newForward + newStrafe + rcw;
+            FR_power_raw = -newForward - newStrafe - rcw;
+            RL_power_raw = -newForward - newStrafe + rcw;
+            RR_power_raw = -newForward + newStrafe - rcw;
+
+            FL_power = Range.clip(FL_power_raw, -1, 1);
+            FR_power = Range.clip(FR_power_raw, -1, 1);
+            RL_power = Range.clip(RL_power_raw,-1 ,1);
+            RR_power = Range.clip(RR_power_raw, -1, 1);
+
+            if (this.g1lbumper) {
+                FL_power /= 4;
+                FR_power /= 4;
+                RL_power /= 4;
+                RR_power /= 4;
+            }
+        } else {
+            FL_power = 0.25;
+            FR_power = -0.25;
+            RL_power = 0.25;
+            RR_power = -0.25;
         }
     }
 
