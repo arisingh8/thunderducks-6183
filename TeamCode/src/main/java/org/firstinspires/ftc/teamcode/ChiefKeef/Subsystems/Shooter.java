@@ -1,12 +1,20 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef.Subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
+import org.firstinspires.ftc.teamcode.ChiefKeef.ShooterTargetingPipeline;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera;
 
 public class Shooter {
     private DcMotor flywheel;
@@ -16,20 +24,46 @@ public class Shooter {
     private double g1rt;
     private boolean g1ab;
 
+    private double tRevs;
+
     private EncoderReader flywheel_reader;
 
-    ElapsedTime eTime = new ElapsedTime();
-    ElapsedTime restTime = new ElapsedTime();
+    OpenCvCamera webcam;
+    ShooterTargetingPipeline pipeline;
+    public boolean onTarget;
+
+    public ElapsedTime eTime = new ElapsedTime();
+
+    public enum firePos {
+        READY,
+        FIRING,
+        WAITING
+    }
+    firePos servoState = firePos.READY;
 
     public void init(HardwareMap hardwareMap) {
         flywheel = hardwareMap.get(DcMotor.class, "flywheel");
         servo = hardwareMap.get(Servo.class, "servo");
 
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
+        pipeline = new ShooterTargetingPipeline();
+        webcam.setPipeline(pipeline);
+
+        webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        {
+            @Override
+            public void onOpened()
+            {
+                webcam.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
+            }
+        });
         flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
         servo.setPosition(0.15);
 
+        flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         eTime.reset();
-        restTime.reset();
     }
 
     public void controls() {
@@ -40,27 +74,46 @@ public class Shooter {
         launchEm(rpm);
     }
 
-    public void shoot(double g1rt, boolean g1ab, Telemetry telemetry) {
+    public void shoot(double g1rt, boolean g1ab, double tRevs, Telemetry telemetry) {
         this.g1rt = g1rt;
         this.g1ab = g1ab;
         this.telemetry = telemetry;
+        this.tRevs = tRevs;
 
         controls();
     }
 
-    public void launchEm(double rpm) {
-        flywheel.setPower(g1rt);
+    public boolean isOnTarget() {
+        onTarget = pipeline.targeting();
+        return onTarget;
+    }
 
-        if (rpm > 5500 && eTime.time() > 0.125) {
-            servo.setPosition(0.4);
-            if (eTime.time() > 0.25) {
-                servo.setPosition(0.15);
-                eTime.reset();
-            }
+    public void launchEm(double rpm) {
+        if(g1rt > 0.5) {
+            flywheel.setPower(-0.98);
+        } else {
+            flywheel.setPower(0);
         }
 
-        if (rpm < 5500) {
-            servo.setPosition(0.15);
+        switch (servoState) {
+            case READY:
+                if (-rpm > tRevs) {
+                    eTime.reset();
+                    servo.setPosition(0.5);
+                    servoState = firePos.FIRING;
+                }
+                break;
+            case FIRING:
+                if (eTime.time() > 0.5) {
+                    servo.setPosition(0);
+                    servoState = firePos.WAITING;
+                }
+                break;
+            case WAITING:
+                if (eTime.time() > 0.75) {
+                    servoState = firePos.READY;
+                }
+                break;
         }
     }
 }
