@@ -32,9 +32,9 @@ package org.firstinspires.ftc.robotcontroller.external.samples;
 import android.content.Context;
 
 import com.qualcomm.ftccommon.SoundPlayer;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 /**
  * This file demonstrates how to play one of the several SKYSTONE/Star Wars sounds loaded into the SDK.

@@ -34,8 +34,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import java.io.File;
-
 /**
  * This file demonstrates how to play simple sounds on both the RC and DS phones.
  * It illustrates how to build sounds into your application as a resource.

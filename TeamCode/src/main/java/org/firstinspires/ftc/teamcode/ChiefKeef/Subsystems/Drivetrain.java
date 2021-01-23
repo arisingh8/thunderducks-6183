@@ -12,7 +12,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.internal.usb.exception.RobotUsbWriteLockException;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
 
 @Config
@@ -22,11 +21,14 @@ public class Drivetrain {
     private Telemetry telemetry;
 
     private double g1lx = 0, g1ly = 0, g1rx = 0;
-    private boolean g1x, g1lbumper;
+    private boolean g1lb, g1rb, g1dl, g1dr, g1dd, g1du;
+    private boolean oldg1x = false;
 
-    public static double P = 0.01;
-    public static double I = 0.01;
+    public static double P = 0.04;
+    public static double I = 0;
     public static double D = 0;
+    public static double rsGain = 3;
+    public static double deadRange = 0.1;
 
     private double integral, previous_error = 0;
 
@@ -42,13 +44,15 @@ public class Drivetrain {
     private double error;
     private double errorMin;
     private double desiredAngle;
+    private int count = 0;
 
-    private ElapsedTime eTime = new ElapsedTime();
-    
+    private final ElapsedTime eTime = new ElapsedTime();
+    private double[] turnList = {0, 90, 180, 270};
+
     public void init(HardwareMap hardwareMap) {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
         parameters.calibrationDataFile = "AdafruitIMUCalibration.json"; // see the calibration sample op mode
         parameters.mode = BNO055IMU.SensorMode.IMU;
         // parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
@@ -74,120 +78,103 @@ public class Drivetrain {
     }
 
     public void controls() {
-        // EncoderRead();
-        double rpms = FL_reader.readCycle();
-        telemetry.addData("RPMs", rpms);
-
-        holonomicFormula(false);
+        holonomicFormula();
         setDriveChainPower();
     }
 
-    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lbumper, boolean g1x, boolean turn, Telemetry telemetry) {
-        this.g1x = g1x;
+    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lb, boolean g1rb, boolean g1dl, boolean g1dr, boolean g1dd, boolean g1du, Telemetry telemetry) {
+        this.g1rb = g1rb;
         this.g1lx = g1lx;
         this.g1ly = g1ly;
         this.g1rx = g1rx;
-        this.g1lbumper = g1lbumper;
+        this.g1lb = g1lb;
+
+        this.g1dl = g1dl;
+        this.g1dr = g1dr;
+        this.g1dd = g1dd;
+        this.g1du = g1du;
 
         this.telemetry = telemetry;
 
-        if (!turn) {
-            controls();
-        } else {
-            turn();
-        }
+        controls();
     }
 
-    public void turn() {
-        holonomicFormula(true);
-        setDriveChainPower();
-    }
+    public void holonomicFormula() {
+        double time = eTime.time();
 
-    public void getJoyValues()
-    {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         float pi = 3.1415926f;
 
         float gyro_degrees = angles.firstAngle;
-        float gyro_radians = gyro_degrees * pi/180;
+        float gyro_radians = gyro_degrees * pi / 180;
         newForward = this.g1ly * Math.cos(gyro_radians) + this.g1lx * Math.sin(gyro_radians);
         newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
-    }
 
-    public void holonomicFormula(boolean turn) {
-        double gain = 4;
-        double time = eTime.time();
+        if (!g1rb) {
+            if (g1du) { desiredAngle = 0; }
+            if (g1dr) { desiredAngle = 270;}
+            if (g1dd) { desiredAngle = 180;}
+            if (g1dl) { desiredAngle = 90;}
+        }
+        desiredAngle = desiredAngle + -(rsGain * g1rx);
+        if (desiredAngle < -180) {
+            desiredAngle += 360;
+        } else if (desiredAngle > 180) {
+            desiredAngle -= 360;
+        }
 
-        if (!turn) {
-            getJoyValues();
-
-            if (g1x) {
-                desiredAngle = 0;
-            }
-            desiredAngle = desiredAngle + -(gain * g1rx);
-            if (desiredAngle < -180) {
-                desiredAngle += 360;
-            } else if (desiredAngle > 180) {
-                desiredAngle -= 360;
-            }
-
-            if (desiredAngle - angles.firstAngle < 0) {
-                errorMin = Math.min(Math.abs(desiredAngle - angles.firstAngle), Math.abs(desiredAngle - angles.firstAngle + 360));
-            } else {
-                errorMin = Math.min(Math.abs(desiredAngle - angles.firstAngle), Math.abs(desiredAngle - angles.firstAngle - 360));
-            }
-
-            if (errorMin == Math.abs(desiredAngle - angles.firstAngle)) {
-                error = desiredAngle - angles.firstAngle;
-            } else if (errorMin == Math.abs(desiredAngle - angles.firstAngle - 360)) {
-                error = desiredAngle - angles.firstAngle - 360;
-            } else if (errorMin == Math.abs(desiredAngle - angles.firstAngle + 360)) {
-                error = desiredAngle - angles.firstAngle + 360;
-            }
-
-            telemetry.addData("errorMin", errorMin);
-            telemetry.addData("Turn Error", error);
-
-            integral += (error*time); // Integral is increased by the error*time (which is .02 seconds using normal IterativeRobot)
-            eTime.reset();
-
-            double derivative = (error - previous_error) / time;
-            double rcw = P*error + I*integral + D*derivative;
-
-            previous_error = error;
-
-            telemetry.addData("Read angle", angles.firstAngle);
-            telemetry.addData("Desired Angle", desiredAngle);
-
-            FL_power_raw = -newForward + newStrafe - rcw;
-            FR_power_raw = -newForward - newStrafe + rcw;
-            RL_power_raw = -newForward - newStrafe - rcw;
-            RR_power_raw = -newForward + newStrafe + rcw;
-
-            FL_power = Range.clip(FL_power_raw, -1, 1);
-            FR_power = Range.clip(FR_power_raw, -1, 1);
-            RL_power = Range.clip(RL_power_raw,-1 ,1);
-            RR_power = Range.clip(RR_power_raw, -1, 1);
-
-            if (this.g1lbumper) {
-                FL_power /= 4;
-                FR_power /= 4;
-                RL_power /= 4;
-                RR_power /= 4;
-            }
+        if (desiredAngle - angles.firstAngle < 0) {
+            errorMin = Math.min(Math.abs(desiredAngle - angles.firstAngle), Math.abs(desiredAngle - angles.firstAngle + 360));
         } else {
-            FL_power = 0.25;
-            FR_power = -0.25;
-            RL_power = 0.25;
-            RR_power = -0.25;
+            errorMin = Math.min(Math.abs(desiredAngle - angles.firstAngle), Math.abs(desiredAngle - angles.firstAngle - 360));
+        }
+
+        if (errorMin == Math.abs(desiredAngle - angles.firstAngle)) {
+            error = desiredAngle - angles.firstAngle;
+        } else if (errorMin == Math.abs(desiredAngle - angles.firstAngle - 360)) {
+            error = desiredAngle - angles.firstAngle - 360;
+        } else if (errorMin == Math.abs(desiredAngle - angles.firstAngle + 360)) {
+            error = desiredAngle - angles.firstAngle + 360;
+        }
+
+        telemetry.addData("Turn Error", error);
+
+        integral += (error * time); // Integral is increased by the error*time (which is .02 seconds using normal IterativeRobot)
+        if (g1rx > -deadRange || g1rx < deadRange) {
+            integral = 0;
+        }
+        eTime.reset();
+
+        double derivative = (error - previous_error) / time;
+        double rcw = P * error + I * integral + D * derivative;
+
+        previous_error = error;
+
+        telemetry.addData("Read angle", angles.firstAngle);
+        telemetry.addData("Desired Angle", desiredAngle);
+
+        FL_power_raw = -newForward + newStrafe - rcw;
+        FR_power_raw = -newForward - newStrafe + rcw;
+        RL_power_raw = -newForward - newStrafe - rcw;
+        RR_power_raw = -newForward + newStrafe + rcw;
+
+        FL_power = Range.clip(FL_power_raw, -1, 1);
+        FR_power = Range.clip(FR_power_raw, -1, 1);
+        RL_power = Range.clip(RL_power_raw, -1, 1);
+        RR_power = Range.clip(RR_power_raw, -1, 1);
+
+        if (this.g1lb) {
+            FL_power /= 4;
+            FR_power /= 4;
+            RL_power /= 4;
+            RR_power /= 4;
         }
     }
 
-    public void setDriveChainPower()
-    {
-        flMotor.setPower(FL_power);
-        frMotor.setPower(-FR_power);
+    public void setDriveChainPower() {
+        flMotor.setPower(-FL_power);
+        frMotor.setPower(FR_power);
         rlMotor.setPower(-RL_power);
         rrMotor.setPower(RR_power);
     }
