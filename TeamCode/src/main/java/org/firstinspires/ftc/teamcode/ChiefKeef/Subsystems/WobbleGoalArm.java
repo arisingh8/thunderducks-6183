@@ -73,8 +73,6 @@ public class WobbleGoalArm {
         } else {
             claw.setPosition(0.25);
         }
-
-        telemetry.addData("wobbleGoalArm position", arm.getCurrentPosition());
     }
 
     public void pickUp(boolean g1dl, boolean g1dr, boolean g1dd, boolean g1du, boolean g1a, boolean g1rb, Telemetry telemetry) {

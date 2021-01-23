@@ -20,18 +20,9 @@ public class Intake {
     public void init(HardwareMap hardwareMap) {
         intakeMotor1 = hardwareMap.get(DcMotor.class, "intake1");
         intakeMotor2 = hardwareMap.get(DcMotor.class, "intake2");
-
-        intake1_reader = new EncoderReader(intakeMotor1, 537.6, 0.1);
-        intake2_reader = new EncoderReader(intakeMotor2, 537.6, 0.1);
     }
 
     public void controls() {
-        double rpm1 = intake1_reader.readCycle();
-        double rpm2 = intake2_reader.readCycle();
-
-        telemetry.addData("Intake 1 RPM", rpm1);
-        telemetry.addData("Intake 2 RPM", rpm2);
-
         if (g1b && !oldg1b) {
             run = !run;
         }

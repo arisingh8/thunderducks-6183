@@ -14,8 +14,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
 
-import java.util.List;
-
 @Config
 public class Drivetrain {
     private DcMotor flMotor, frMotor, rlMotor, rrMotor;
@@ -80,10 +78,6 @@ public class Drivetrain {
     }
 
     public void controls() {
-        // EncoderRead();
-        double rpms = FL_reader.readCycle();
-        telemetry.addData("RPMs", rpms);
-
         holonomicFormula();
         setDriveChainPower();
     }
@@ -105,7 +99,9 @@ public class Drivetrain {
         controls();
     }
 
-    public void getJoyValues() {
+    public void holonomicFormula() {
+        double time = eTime.time();
+
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         float pi = 3.1415926f;
@@ -114,12 +110,6 @@ public class Drivetrain {
         float gyro_radians = gyro_degrees * pi / 180;
         newForward = this.g1ly * Math.cos(gyro_radians) + this.g1lx * Math.sin(gyro_radians);
         newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
-    }
-
-    public void holonomicFormula() {
-        double time = eTime.time();
-
-        getJoyValues();
 
         if (!g1rb) {
             if (g1du) { desiredAngle = 0; }
@@ -148,7 +138,6 @@ public class Drivetrain {
             error = desiredAngle - angles.firstAngle + 360;
         }
 
-        telemetry.addData("errorMin", errorMin);
         telemetry.addData("Turn Error", error);
 
         integral += (error * time); // Integral is increased by the error*time (which is .02 seconds using normal IterativeRobot)
