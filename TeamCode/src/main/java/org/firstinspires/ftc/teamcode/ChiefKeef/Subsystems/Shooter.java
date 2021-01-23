@@ -1,9 +1,7 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef.Subsystems;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.PIDCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -14,17 +12,16 @@ import org.firstinspires.ftc.teamcode.ChiefKeef.ShooterTargetingPipeline;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
-import org.openftc.easyopencv.OpenCvInternalCamera;
 
 public class Shooter {
     private DcMotor flywheel;
     private Servo servo;
     private Telemetry telemetry;
 
-    private double g1rt;
-    private boolean g1ab;
+    private double g1rt, g1lt;
 
     private double tRevs;
+    private boolean firstShot;
 
     private EncoderReader flywheel_reader;
 
@@ -36,6 +33,9 @@ public class Shooter {
 
     public enum firePos {
         READY,
+        FIRSTSHOT,
+        POWERSHOT,
+        POWERWAIT,
         FIRING,
         WAITING
     }
@@ -74,38 +74,71 @@ public class Shooter {
         launchEm(rpm);
     }
 
-    public void shoot(double g1rt, boolean g1ab, double tRevs, Telemetry telemetry) {
+    public void shoot(double g1rt, double g1lt, double tRevs, Telemetry telemetry) {
         this.g1rt = g1rt;
-        this.g1ab = g1ab;
+        this.g1lt = g1lt;
         this.telemetry = telemetry;
         this.tRevs = tRevs;
 
         controls();
     }
 
-    public boolean isOnTarget() {
-        onTarget = pipeline.targeting();
-        return onTarget;
-    }
-
     public void launchEm(double rpm) {
-        if(g1rt > 0.5) {
-            flywheel.setPower(-0.98);
-        } else {
-            flywheel.setPower(0);
-        }
-
+        double firstShotPower = -0.98;
+        double normalPower = -0.95;
+        double powershotPower = -0.9;
+        int powershotRevs = 5000;
         switch (servoState) {
+            case POWERWAIT:
+                if (eTime.time() > 0.75 && g1lt < 0.5) {
+                    servoState = firePos.READY;
+                }
+                break;
+            case POWERSHOT:
+                if (eTime.time() > 0.5) {
+                    servo.setPosition(0);
+                    servoState = firePos.WAITING;
+                }
+                break;
             case READY:
-                if (-rpm > tRevs) {
+                if (g1rt > 0.5) {
+                    if (firstShot) {
+                        flywheel.setPower(firstShotPower);
+                    } else {
+                        flywheel.setPower(normalPower);
+                    }
+                } else if (g1lt > 0.5) {
+                    flywheel.setPower(powershotPower);
+                } else {
+                    flywheel.setPower(0);
+                    firstShot = true;
+                }
+                if (-rpm > tRevs && g1rt > 0.5) {
                     eTime.reset();
                     servo.setPosition(0.5);
+                    if (firstShot) {
+                        servoState = firePos.FIRSTSHOT;
+                    } else {
+                        servoState = firePos.FIRING;
+                    }
+                }
+                if (-rpm > powershotRevs && g1lt > 0.5) {
+                    eTime.reset();
+                    servo.setPosition(0.5);
+                    servoState = firePos.POWERSHOT;
+                }
+                break;
+            case FIRSTSHOT:
+                if (eTime.time() > 0.1) {
                     servoState = firePos.FIRING;
+                    eTime.reset();
                 }
                 break;
             case FIRING:
                 if (eTime.time() > 0.5) {
                     servo.setPosition(0);
+                    firstShot = false;
+                    flywheel.setPower(normalPower);
                     servoState = firePos.WAITING;
                 }
                 break;

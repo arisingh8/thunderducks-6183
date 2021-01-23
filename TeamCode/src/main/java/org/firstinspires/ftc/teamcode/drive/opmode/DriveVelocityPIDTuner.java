@@ -128,6 +128,7 @@ public class DriveVelocityPIDTuner extends LinearOpMode {
 
                     // update telemetry
                     telemetry.addData("targetVelocity", motionState.getV());
+                    telemetry.addData("inches", motionState.getX());
                     for (int i = 0; i < velocities.size(); i++) {
                         telemetry.addData("measuredVelocity" + i, velocities.get(i));
                         telemetry.addData(

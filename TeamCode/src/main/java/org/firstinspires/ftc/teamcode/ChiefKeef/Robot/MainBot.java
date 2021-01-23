@@ -33,22 +33,10 @@ public class MainBot extends OpMode {
 
     @Override
     public void loop() {
-        shooter.shoot(gamepad1.right_trigger, gamepad1.a, 5400, multiTelemetry);
-        intake.intake(gamepad1.b, multiTelemetry);
-        wobbleGoalArm.pickUp(gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, multiTelemetry);
-
-        if (gamepad1.y && !oldg1y) {
-            run = !run;
-        }
-        oldg1y = gamepad1.y;
-
-        if (run) {
-            if (!shooter.isOnTarget()) {
-                drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.x, true, multiTelemetry);
-            }
-        } else {
-            drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.x, false, multiTelemetry);
-        }
+        shooter.shoot(gamepad1.right_trigger, gamepad1.left_trigger, 5400, multiTelemetry);
+        intake.intake(gamepad1.b, gamepad1.y, multiTelemetry);
+        wobbleGoalArm.pickUp(gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, gamepad1.a, gamepad1.right_bumper, multiTelemetry);
+        drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.right_bumper, gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, multiTelemetry);
 
         multiTelemetry.update();
     }
