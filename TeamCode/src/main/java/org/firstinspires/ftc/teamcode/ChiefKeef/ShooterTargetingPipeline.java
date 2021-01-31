@@ -6,8 +6,10 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
@@ -17,7 +19,9 @@ import java.util.List;
 public class ShooterTargetingPipeline extends OpenCvPipeline {
 
     private int threshold = 50;
-    private double peri;
+
+    private double aspectRatio;
+    private int minWidth = 100;
 
     private MatOfPoint approxconv = new MatOfPoint();
     private MatOfPoint2f approx = new MatOfPoint2f();
@@ -27,86 +31,83 @@ public class ShooterTargetingPipeline extends OpenCvPipeline {
     private Scalar white = new Scalar(255, 255, 255);
     private Scalar red = new Scalar(255, 0, 0);
 
-    private List<Point> points;
+    private double maxVal = 0;
+    private int maxValIdx = 0;
+    private Rect maxRect = new Rect();
+
+    private enum ringStack {
+        NONE,
+        ONE,
+        FOUR
+    }
+    ringStack ringState = ringStack.NONE;
 
     private Mat hierarchy = new Mat();
     private Mat mask = new Mat();
     private Mat result = new Mat();
 
+    private int horizon = (100 / 320) * 720;
+
     @Override
     public Mat processFrame(Mat input)
     {
-        Imgproc.cvtColor(input, input, Imgproc.COLOR_RGB2HSV);
+        Scalar color = new Scalar(255, 255, 255);
+
+        Mat hierarchy = new Mat();
+        Mat mask = new Mat();
+        Mat result = new Mat();
+
+        Imgproc.cvtColor(input, input, Imgproc.COLOR_BGR2YCrCb);
+
         // Threshold of blue in HSV space
-        Scalar lower = new Scalar(160, 50, 50);
-        Scalar upper = new Scalar(180, 255, 255);
+        Scalar lower = new Scalar(0, 140, 40);
+        Scalar upper = new Scalar(255.0, 230.0, 95.0);
 
         Core.inRange(input, lower, upper, mask);
         Core.bitwise_and(input, input, result, mask);
 
-        Imgproc.cvtColor(result, result, Imgproc.COLOR_HSV2RGB);
-        Imgproc.cvtColor(result, result, Imgproc.COLOR_RGB2GRAY);
-
+        Imgproc.cvtColor(result, result, Imgproc.COLOR_YCrCb2BGR);
+        Imgproc.cvtColor(result, result, Imgproc.COLOR_BGR2GRAY);
         Imgproc.blur(result, result, new Size(3, 3));
 
         Imgproc.Canny(result, result, threshold, threshold * 3);
         List<MatOfPoint> contours = new ArrayList<>();
-        List<MatOfPoint> approxList = new ArrayList<>();
         Imgproc.findContours(result, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
+        result = Mat.zeros(result.size(), CvType.CV_8UC3);
+        Imgproc.drawContours(result, contours, -1, color, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
+
         for (int i = 0; i < contours.size(); i++) {
-            contours.get(i).convertTo(cnt, CvType.CV_32F);
-            peri = Imgproc.arcLength(cnt, true);
-            Imgproc.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
-            Point[] points = approx.toArray();
-            if (points.length == 8) {
-                approx.convertTo(approxconv, CvType.CV_32S);
-                approxList.add(approxconv);
-            }
-        }
-
-        if (!approxList.isEmpty()) {
-            double maxVal = 0;
-            int maxValIdx = 0;
-            for (int i = 0; i < approxList.size(); i++) {
-                double contourArea = Imgproc.contourArea(approxList.get(i));
-                if (maxVal < contourArea) {
-                    maxVal = contourArea;
+            Rect contourArea = Imgproc.boundingRect(contours.get(i));
+            if (contourArea.y + contourArea.height > horizon) {
+                if (maxVal < contourArea.area()) {
+                    maxVal = contourArea.area();
+                    maxRect = contourArea;
                     maxValIdx = i;
                 }
             }
-            for(Point p: approxList.get(maxValIdx).toList()) {
-                String string = p.x+" "+p.y;
-                Imgproc.putText(input, string, p, Imgproc.FONT_HERSHEY_COMPLEX, 0.5, white);
-            }
-            points = approxList.get(maxValIdx).toList();
-            for (int i = 0; i < approxList.size(); i++) {
-                if (i != maxValIdx) {
-                    Imgproc.drawContours(input, approxList, i, red, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
-                } else {
-                    Imgproc.drawContours(input, approxList, i, white, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
-                }
-            }
-        } else {
-            for (int i = 0; i < contours.size(); i++) {
-                Imgproc.drawContours(input, contours, i, white, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
-            }
         }
+
+        aspectRatio = Double.valueOf(maxRect.width)/Double.valueOf(maxRect.height);
+
+        Imgproc.putText(result, String.valueOf(aspectRatio), new Point(maxRect.x + maxRect.width, maxRect.y + maxRect.height), Imgproc.FONT_HERSHEY_COMPLEX, 0.5, color);
+        Imgproc.drawContours(result, contours, maxValIdx, new Scalar(0, 255, 0), 2, Imgproc.LINE_8, hierarchy, 0, new Point());
+        Imgproc.rectangle(result, maxRect, color);
 
         return input;
     }
-    public boolean targeting() {
-        if (points != null) {
-            double x2 = points.get(4).x;
-            double x = points.get(5).x;
-            if (x < 350 && x2 > 350) {
-                return true;
-            } else {
-                return false;
-            }
+
+    public ringStack getRingStack() {
+        if (maxRect.width < minWidth) {
+            ringState = ringStack.NONE;
+            return ringState;
+        }
+        if (aspectRatio > 2) {
+            ringState = ringStack.ONE;
+            return ringState;
         } else {
-            return false;
+            ringState = ringStack.FOUR;
+            return ringState;
         }
     }
 }
