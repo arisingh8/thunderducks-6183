@@ -13,6 +13,7 @@ public class MainAuto extends AutoFunctions {
     @Override
     public void runOpMode() {
         super.runOpMode();
+        int ringStack = getRingStack();
         waitForStart();
 
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
@@ -44,13 +45,43 @@ public class MainAuto extends AutoFunctions {
                 .splineTo(new Vector2d(54.5, -23), Math.toRadians(270))
                 .build();
 
+        Trajectory enda = drive.trajectoryBuilder(wobblea.end())
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
+                .build();
+
+        Trajectory endb = drive.trajectoryBuilder(wobbleb.end())
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
+                .build();
+
+        Trajectory endc = drive.trajectoryBuilder(wobblec.end())
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
+                .build();
+
         Trajectory end = drive.trajectoryBuilder(pshot3.end())
                 .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
 
         drive.followTrajectory(beginning);
+        autoFirePowerShot();
         drive.followTrajectory(pshot2);
+        autoFirePowerShot();
         drive.followTrajectory(pshot3);
+        autoFirePowerShot();
+
+        if (ringStack == 0) {
+            drive.followTrajectory(wobblea);
+            autoDropWobbleGoal();
+            drive.followTrajectory(enda);
+        } else if (ringStack == 1) {
+            drive.followTrajectory(wobbleb);
+            autoDropWobbleGoal();
+            drive.followTrajectory(endb);
+        } else if (ringStack == 4) {
+            drive.followTrajectory(wobblec);
+            autoDropWobbleGoal();
+            drive.followTrajectory(endc);
+        }
+
         drive.followTrajectory(end);
     }
 }
