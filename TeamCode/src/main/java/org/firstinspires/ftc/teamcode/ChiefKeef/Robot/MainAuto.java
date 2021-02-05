@@ -14,8 +14,7 @@ public class MainAuto extends AutoFunctions {
     public void runOpMode() {
         super.runOpMode();
         int ringStack = getRingStack();
-        waitForStart();
-
+        hsvTelemetry();
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
         Pose2d start = new Pose2d(-62, -5, Math.toRadians(0));
 
@@ -34,15 +33,15 @@ public class MainAuto extends AutoFunctions {
                 .build();
 
         Trajectory wobblea = drive.trajectoryBuilder(pshot3.end())
-                .splineTo(new Vector2d(5.5, -22.5), Math.toRadians(270))
+                .lineToLinearHeading(new Pose2d(5.5, -22.5, Math.toRadians(90)))
                 .build();
 
         Trajectory wobbleb = drive.trajectoryBuilder(pshot3.end())
-                .splineTo(new Vector2d(29, 1.5), Math.toRadians(270))
+                .lineToLinearHeading(new Pose2d(29, 1.5, Math.toRadians(90)))
                 .build();
 
         Trajectory wobblec = drive.trajectoryBuilder(pshot3.end())
-                .splineTo(new Vector2d(54.5, -23), Math.toRadians(270))
+                .lineToLinearHeading(new Pose2d(54.5, -23, Math.toRadians(90)))
                 .build();
 
         Trajectory enda = drive.trajectoryBuilder(wobblea.end())
@@ -61,12 +60,15 @@ public class MainAuto extends AutoFunctions {
                 .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
 
+        waitForStart();
+
         drive.followTrajectory(beginning);
         autoFirePowerShot();
         drive.followTrajectory(pshot2);
         autoFirePowerShot();
         drive.followTrajectory(pshot3);
         autoFirePowerShot();
+        turnOffFlywheel();
 
         if (ringStack == 0) {
             drive.followTrajectory(wobblea);
@@ -82,6 +84,6 @@ public class MainAuto extends AutoFunctions {
             drive.followTrajectory(endc);
         }
 
-        drive.followTrajectory(end);
+        // drive.followTrajectory(end);
     }
 }

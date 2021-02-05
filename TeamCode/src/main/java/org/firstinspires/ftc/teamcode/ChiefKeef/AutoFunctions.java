@@ -20,11 +20,10 @@ public class AutoFunctions extends LinearOpMode {
     private EncoderReader flywheel_reader;
     public int powerShotCount = 1;
 
-    private final double[] powerShotPower = {-0.98, -0.95, -0.95};
-    private final double[] powerShotRevs = {5000, 5000, 5000};
+    private final double[] powerShotPower = {-0.92, -0.90, -0.90};
+    private final double[] powerShotRevs = {4800, 4800, 4800};
 
     RingStackPipeline pipeline = new RingStackPipeline();
-    WebcamName webcamName = hardwareMap.get(WebcamName.class, "Webcam 1");
 
     private enum autofirePos {
         READY,
@@ -66,15 +65,8 @@ public class AutoFunctions extends LinearOpMode {
 
         claw.setPosition(0);
 
-        eTime.reset();
-
-        telemetry.addLine("Robot initialized.");
-        telemetry.update();
-    }
-
-    public int getRingStack() {
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        OpenCvCamera camera = OpenCvCameraFactory.getInstance().createWebcam(webcamName, cameraMonitorViewId);
+        OpenCvCamera camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
 
         camera.setViewportRenderer(OpenCvCamera.ViewportRenderer.GPU_ACCELERATED);
         camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
@@ -82,10 +74,18 @@ public class AutoFunctions extends LinearOpMode {
             @Override
             public void onOpened()
             {
-                camera.startStreaming(1280, 720, OpenCvCameraRotation.UPRIGHT);
                 camera.setPipeline(pipeline);
+                camera.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
             }
         });
+
+        eTime.reset();
+
+        telemetry.addLine("Robot initialized.");
+        telemetry.update();
+    }
+
+    public int getRingStack() {
         while (!isStarted()) {
             if (pipeline.getRingStack() == 0) {
                 telemetry.addData("Ring Stack", "Zero");
@@ -93,10 +93,16 @@ public class AutoFunctions extends LinearOpMode {
                 telemetry.addData("Ring Stack", "One");
             } else if (pipeline.getRingStack() == 4) {
                 telemetry.addData("Ring Stack", "Four");
+            } else {
+                telemetry.addData("Ring Stack", pipeline.getRingStack());
             }
             telemetry.update();
         }
         return pipeline.getRingStack();
+    }
+
+    public void hsvTelemetry() {
+        telemetry.addData("HSV Color", pipeline.getHsvOutput());
     }
 
     public void firePowerShot() {
@@ -131,10 +137,15 @@ public class AutoFunctions extends LinearOpMode {
     }
 
     public void autoFirePowerShot() {
+        eTime.reset();
         while (!fired) {
             firePowerShot();
         }
         fired = false;
+        //flywheel.setPower(0);
+    }
+
+    public void turnOffFlywheel() {
         flywheel.setPower(0);
     }
 
