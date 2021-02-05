@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef.Subsystems;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -13,6 +15,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
+import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
+import org.firstinspires.ftc.teamcode.drive.StandardTrackingWheelLocalizer;
 
 @Config
 public class Drivetrain {
@@ -22,7 +26,7 @@ public class Drivetrain {
 
     private double g1lx = 0, g1ly = 0, g1rx = 0;
     private boolean g1lb, g1rb, g1dl, g1dr, g1dd, g1du;
-    private boolean oldg1x = false;
+    private boolean g1y;
 
     public static double P = 0.04;
     public static double I = 0;
@@ -45,6 +49,15 @@ public class Drivetrain {
     private double errorMin;
     private double desiredAngle;
     private int count = 0;
+
+    private StandardTrackingWheelLocalizer localizer;
+    private Pose2d currentPose;
+    private Vector2d goalLocation = new Vector2d(72, -13.75);
+    private double distanceToGoal = 0;
+    private double currentPoseX = currentPose.getX();
+    private double currentPoseY = currentPose.getY();
+    private double goalPoseX = goalLocation.getX();
+    private double goalPoseY = goalLocation.getY();
 
     private final ElapsedTime eTime = new ElapsedTime();
     private double[] turnList = {0, 90, 180, 270};
@@ -74,15 +87,26 @@ public class Drivetrain {
 
         imu.startAccelerationIntegration(null, null, 1000);
 
+        localizer = new StandardTrackingWheelLocalizer(hardwareMap);
+
+        localizer.setPoseEstimate(PoseStorage.globalPose);
+
         eTime.reset();
     }
 
     public void controls() {
+        localizer.update();
+        writeDistanceToGlobal();
+
+        if (g1y) {
+            turnToGoal();
+        }
+
         holonomicFormula();
         setDriveChainPower();
     }
 
-    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lb, boolean g1rb, boolean g1dl, boolean g1dr, boolean g1dd, boolean g1du, Telemetry telemetry) {
+    public void drive(double g1lx, double g1ly, double g1rx, boolean g1lb, boolean g1rb, boolean g1dl, boolean g1dr, boolean g1dd, boolean g1du, boolean g1y, Telemetry telemetry) {
         this.g1rb = g1rb;
         this.g1lx = g1lx;
         this.g1ly = g1ly;
@@ -94,9 +118,31 @@ public class Drivetrain {
         this.g1dd = g1dd;
         this.g1du = g1du;
 
+        this.g1y = g1y;
+
         this.telemetry = telemetry;
 
         controls();
+    }
+
+    public void writeDistanceToGlobal() {
+        currentPose = localizer.getPoseEstimate();
+
+        currentPoseX = currentPose.getX();
+        currentPoseY = currentPose.getY();
+
+        distanceToGoal = Math.sqrt(Math.pow(currentPoseY-goalPoseY, 2) + Math.pow(currentPoseX-goalPoseX, 2));
+        PoseStorage.distanceToGoal = distanceToGoal;
+    }
+
+    public void turnToGoal() {
+        /*
+        currentPose = localizer.getPoseEstimate();
+
+        currentPoseX = currentPose.getX();
+        currentPoseY = currentPose.getY();
+         */
+        desiredAngle = Math.atan2(currentPoseY-goalPoseY, currentPoseX-goalPoseX);
     }
 
     public void holonomicFormula() {

@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.ChiefKeef;
 import com.acmerobotics.dashboard.config.Config;
 
 import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
@@ -29,6 +28,7 @@ public class RingStackPipeline extends OpenCvPipeline {
     private Rect maxRect = new Rect();
 
     private int ringState = 0;
+    Scalar color = new Scalar(255, 255, 255);
 
     private Mat hierarchy = new Mat();
     private Mat mask = new Mat();
@@ -36,54 +36,22 @@ public class RingStackPipeline extends OpenCvPipeline {
     private Mat cnt = new Mat();
 
     private int horizon = (int) ((180.0 / 320.0) * 480);
-    private int vertHorizon = (int) ((160.0 / 320.0) * 640);
 
-    private int pixelCount = 0;
-
-    public static int readx = 300;
-    public static int ready = 300;
-
-    public static int startx = 275;
-    public static int starty = 175;
-    public static int width = 200;
-    public static int height = 175;
-    public static int satCutoff = 122;
-
-    private double[] hsvoutput;
+    public static int lowerH = 90;
+    public static int lowerS = 90;
+    public static int lowerV = 100;
+    public static int upperH = 150;
+    public static int upperS = 200;
+    public static int upperV = 180;
 
     @Override
     public Mat processFrame(Mat input)
     {
-        pixelCount = 0;
-        Scalar color = new Scalar(255, 255, 255);
-
         Imgproc.cvtColor(input, input, Imgproc.COLOR_RGB2HSV);
 
-
-        for (int i = startx; i < width+startx; i++) {
-            for (int k = starty; k < height+starty; k++) {
-                double[] hsv = input.get(k, i);
-
-                if (hsv[0] > satCutoff) {
-                    pixelCount++;
-                    double[] data = {0, 0, 0};
-                    //input.put(k, i, data);
-                }
-            }
-        }
-
-        hsvoutput = input.get(ready, readx);
-        double[] data = {0, 0, 0};
-        input.put(ready, readx, data);
-
-        Rect targetArea = new Rect(startx, starty, width, height);
-        Imgproc.rectangle(input, targetArea, color);
-
-        return input;
-        /*
         // Threshold of orange in HSV space
-        Scalar lower = new Scalar(90, 90, 100);
-        Scalar upper = new Scalar(150, 200, 180);
+        Scalar lower = new Scalar(lowerH, lowerS, lowerV);
+        Scalar upper = new Scalar(upperH, upperS, upperV);
 
         Core.inRange(input, lower, upper, mask);
         Core.bitwise_and(input, input, result, mask);
@@ -118,28 +86,19 @@ public class RingStackPipeline extends OpenCvPipeline {
         Imgproc.rectangle(result, maxRect, color);
 
         return result;
-        */
     }
 
     public int getRingStack() {
-        /*
         if (maxRect.width < minWidth) {
             ringState = 0;
             return ringState;
         }
+
         if (aspectRatio > 2) {
             ringState = 1;
-            return ringState;
         } else {
             ringState = 4;
-            return ringState;
         }
-
-         */
-        return pixelCount;
-    }
-
-    public double[] getHsvOutput() {
-        return hsvoutput;
+        return ringState;
     }
 }

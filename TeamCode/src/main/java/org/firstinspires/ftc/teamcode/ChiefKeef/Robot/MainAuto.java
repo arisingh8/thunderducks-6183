@@ -6,6 +6,7 @@ import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.ChiefKeef.AutoFunctions;
+import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
 @Autonomous
@@ -83,6 +84,8 @@ public class MainAuto extends AutoFunctions {
             autoDropWobbleGoal();
             drive.followTrajectory(endc);
         }
+
+        PoseStorage.globalPose = drive.getPoseEstimate();
 
         // drive.followTrajectory(end);
     }
