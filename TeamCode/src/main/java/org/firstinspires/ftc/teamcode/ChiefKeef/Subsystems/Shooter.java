@@ -22,16 +22,19 @@ public class Shooter {
 
     private int shotCount = 1, powerShotCount = 1;
     private boolean powerfiring = false, standardfiring = false, override = false;
-    private final double[] shotPower = {-0.98, -0.95, -0.95}, powerShotPower = {-0.98, -0.95, -0.95};
-    private final double[] shotRevs = {5400, 5400, 5400}, powerShotRevs = {5000, 5000, 5000};
+    private final double[] shotPower = {-0.98, -0.95, -0.95}, powerShotPower = {-0.95, -0.93, -0.93};
+    private final double[] shotRevs = {5400, 5400, 5400}, powerShotRevs = {4800, 4800, 4800};
 
     public ElapsedTime eTime = new ElapsedTime();
 
     public static double multiplier = 1.7;
+    public static double firingTime = 0.4;
+    public static double waitingTime = 0.5;
     private double targetRPM = multiplier * 120 * (PoseStorage.distanceToGoal+1.806) / Math.PI*0.04128;
 
     public enum firePos {
         READY,
+        POWERCHECK,
         FIRING,
         WAITING
     }
@@ -79,37 +82,26 @@ public class Shooter {
                 if (g1rt > 0.5) {
                     powerfiring = false;
                     standardfiring = true;
-                    if (g1rb) {
-                        override = true;
-                        flywheel.setPower(shotPower[shotCount-1]);
-                    } else {
-                        flywheel.setPower(targetRPM/6000 + 0.05);
-                    }
+                    flywheel.setPower(shotPower[shotCount-1]);
+                    servoState = firePos.POWERCHECK;
                 } else if (g1lt > 0.5) {
                     standardfiring = false;
                     powerfiring = true;
                     flywheel.setPower(powerShotPower[powerShotCount-1]);
+                    servoState = firePos.POWERCHECK;
                 } else {
                     flywheel.setPower(0);
                 }
+                break;
+            case POWERCHECK:
+                if (standardfiring && -rpm > shotRevs[shotCount-1]) {
+                    powerShotCount = 1;
+                    shotCount += 1;
 
-                if (override) {
-                    if (standardfiring && -rpm > shotRevs[shotCount-1]) {
-                        powerShotCount = 1;
-                        shotCount += 1;
-
-                        eTime.reset();
-                        servoState = firePos.FIRING;
-                    }
-                } else {
-                    if (standardfiring && -rpm > targetRPM) {
-                        powerShotCount = 1;
-                        shotCount += 1;
-
-                        eTime.reset();
-                        servoState = firePos.FIRING;
-                    }
+                    eTime.reset();
+                    servoState = firePos.FIRING;
                 }
+
                 if (powerfiring && -rpm > powerShotRevs[powerShotCount-1]) {
                     shotCount = 1;
                     powerShotCount += 1;
@@ -120,21 +112,19 @@ public class Shooter {
                 break;
             case FIRING:
                 servo.setPosition(0.5);
-                if (eTime.time() > 0.5) {
+                if (eTime.time() > firingTime) {
                     servo.setPosition(0);
                     servoState = firePos.WAITING;
                 }
                 break;
             case WAITING:
-                if (eTime.time() > 0.75) {
+                if (eTime.time() > waitingTime) {
                     if (standardfiring) {
                         servoState = firePos.READY;
-                        override = false;
                         standardfiring = false;
                     } else if (powerfiring) {
                         if (g1lt < 0.2) {
                             servoState = firePos.READY;
-                            override = false;
                             powerfiring = false;
                         }
                     }

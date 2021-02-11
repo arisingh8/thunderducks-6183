@@ -35,7 +35,7 @@ public class MainBot extends OpMode {
         shooter.shoot(gamepad1.right_trigger, gamepad1.left_trigger, gamepad1.right_bumper, multiTelemetry);
         intake.intake(gamepad1.b, gamepad1.y, multiTelemetry);
         wobbleGoalArm.pickUp(gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, gamepad1.a, gamepad1.right_bumper, multiTelemetry);
-        drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.right_bumper, gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, gamepad1.y, multiTelemetry);
+        drivetrain.drive(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x, gamepad1.left_bumper, gamepad1.right_bumper, gamepad1.dpad_left, gamepad1.dpad_right, gamepad1.dpad_down, gamepad1.dpad_up, multiTelemetry);
 
         multiTelemetry.update();
     }

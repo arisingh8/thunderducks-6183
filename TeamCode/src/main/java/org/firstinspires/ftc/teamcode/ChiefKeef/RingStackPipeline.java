@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -37,12 +38,14 @@ public class RingStackPipeline extends OpenCvPipeline {
 
     private int horizon = (int) ((180.0 / 320.0) * 480);
 
-    public static int lowerH = 90;
+    public static int lowerH = 10;
     public static int lowerS = 90;
     public static int lowerV = 100;
-    public static int upperH = 150;
+    public static int upperH = 20;
     public static int upperS = 200;
     public static int upperV = 180;
+
+    public static ElapsedTime ringstackTime = new ElapsedTime();
 
     @Override
     public Mat processFrame(Mat input)
@@ -89,16 +92,20 @@ public class RingStackPipeline extends OpenCvPipeline {
     }
 
     public int getRingStack() {
-        if (maxRect.width < minWidth) {
-            ringState = 0;
-            return ringState;
-        }
+        if (ringstackTime.time() > 2.5) {
+            if (maxRect.width < minWidth) {
+                ringState = 0;
+                return ringState;
+            }
 
-        if (aspectRatio > 2) {
-            ringState = 1;
+            if (aspectRatio > 2) {
+                ringState = 1;
+            } else {
+                ringState = 4;
+            }
+            return ringState;
         } else {
-            ringState = 4;
+            return -1;
         }
-        return ringState;
     }
 }

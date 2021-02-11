@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.ChiefKeef.RingStackPipeline;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 
 @Autonomous
-public class MainAuto extends AutoFunctions {
+public class WeirdMainAuto extends AutoFunctions {
     public int ringstack;
 
     @Override
@@ -30,6 +30,10 @@ public class MainAuto extends AutoFunctions {
         Trajectory beginning = drive.trajectoryBuilder(start)
                 .splineTo(new Vector2d(-27.25, 8.5), 0)
                 .splineTo(new Vector2d(-3.25, -12), 0)
+                .addDisplacementMarker(() -> {
+                    autoFireHighGoal(3);
+                    turnOffFlywheel();
+                })
                 .build();
 
         /*
@@ -45,17 +49,29 @@ public class MainAuto extends AutoFunctions {
          */
         Trajectory wobblea = drive.trajectoryBuilder(beginning.end())
                 .splineTo(new Vector2d(5.5, -22.5), Math.toRadians(90))
+                .addDisplacementMarker(() -> {
+                    autoDropWobbleGoal();
+                })
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
 
         Trajectory wobbleb = drive.trajectoryBuilder(beginning.end())
                 .splineTo(new Vector2d(29, 1.5), Math.toRadians(90))
+                .addDisplacementMarker(() -> {
+                    autoDropWobbleGoal();
+                })
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
 
         Trajectory wobblec = drive.trajectoryBuilder(beginning.end())
                 .splineTo(new Vector2d(54.5, -23), Math.toRadians(90))
+                .addDisplacementMarker(() -> {
+                    autoDropWobbleGoal();
+                })
+                .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
 
-
+        /*
         Trajectory enda = drive.trajectoryBuilder(wobblea.end())
                 .lineToConstantHeading(new Vector2d(5.5, 0))
                 .build();
@@ -68,11 +84,10 @@ public class MainAuto extends AutoFunctions {
                 .lineToConstantHeading(new Vector2d(5.5, 0))
                 .build();
 
-        /*
         Trajectory end = drive.trajectoryBuilder(pshot3.end())
                 .splineTo(new Vector2d(5.5, 0), Math.toRadians(90))
                 .build();
-        */
+         */
         waitForStart();
         RingStackPipeline.ringstackTime.reset();
         ringstack = getRingStack();
@@ -81,41 +96,28 @@ public class MainAuto extends AutoFunctions {
         }
 
         drive.followTrajectory(beginning);
-        autoFireHighGoal(3);
-        turnOffFlywheel();
-
         /*
         autoFirePowerShot();
         drive.followTrajectory(pshot2);
         autoFirePowerShot();
         drive.followTrajectory(pshot3);
         autoFirePowerShot();
-        */
+         */
 
         if (ringstack == 0) {
-            System.out.println("vargas: ringstack is 0");
             drive.followTrajectory(wobblea);
-            autoDropWobbleGoal();
-            System.out.println("vargas: wobble is dropped");
-            drive.followTrajectory(enda);
-            System.out.println("vargas: opmode is done");
+            //autoDropWobbleGoal();
+            //drive.followTrajectory(enda);
         } else if (ringstack == 1) {
-            System.out.println("vargas: ringstack is 1");
             drive.followTrajectory(wobbleb);
-            autoDropWobbleGoal();
-            System.out.println("vargas: wobble is dropped");
-            drive.followTrajectory(endb);
-            System.out.println("vargas: opmode is done");
+            //autoDropWobbleGoal();
+            //drive.followTrajectory(endb);
         } else if (ringstack == 4) {
-            System.out.println("vargas: ringstack is 4");
             drive.followTrajectory(wobblec);
-            autoDropWobbleGoal();
-            System.out.println("vargas: wobble is dropped");
-            drive.followTrajectory(endc);
-            System.out.println("vargas: opmode is done");
+            //autoDropWobbleGoal();
+            //drive.followTrajectory(endc);
         }
 
-        closeCamera();
         PoseStorage.globalPose = drive.getPoseEstimate();
 
         // drive.followTrajectory(end);
