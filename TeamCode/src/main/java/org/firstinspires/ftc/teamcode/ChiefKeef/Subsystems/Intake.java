@@ -15,8 +15,6 @@ public class Intake {
     private boolean oldg1b;
     private boolean run;
 
-    private EncoderReader intake1_reader, intake2_reader;
-
     public void init(HardwareMap hardwareMap) {
         intakeMotor1 = hardwareMap.get(DcMotor.class, "intake1");
         intakeMotor2 = hardwareMap.get(DcMotor.class, "intake2");
@@ -46,6 +44,7 @@ public class Intake {
         } else if (run) {
             intakeMotor1.setPower(1);
             intakeMotor2.setPower(1);
+            Shooter.shotCount = 1;
         } else {
             intakeMotor1.setPower(0);
             intakeMotor2.setPower(0);

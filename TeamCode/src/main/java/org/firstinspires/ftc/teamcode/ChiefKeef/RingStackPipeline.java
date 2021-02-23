@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
@@ -34,7 +35,7 @@ public class RingStackPipeline extends OpenCvPipeline {
     private Mat hierarchy = new Mat();
     private Mat mask = new Mat();
     private Mat result = new Mat();
-    private Mat cnt = new Mat();
+    private MatOfPoint2f cnt = new MatOfPoint2f();
 
     private int horizon = (int) ((180.0 / 320.0) * 480);
 
@@ -92,7 +93,7 @@ public class RingStackPipeline extends OpenCvPipeline {
     }
 
     public int getRingStack() {
-        if (ringstackTime.time() > 2.5) {
+        if (ringstackTime.time() > 1) {
             if (maxRect.width < minWidth) {
                 ringState = 0;
                 return ringState;

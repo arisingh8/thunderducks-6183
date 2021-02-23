@@ -5,17 +5,36 @@ import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.acmerobotics.roadrunner.trajectory.Trajectory;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ChiefKeef.AutoFunctions;
 import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
 import org.firstinspires.ftc.teamcode.ChiefKeef.RingStackPipeline;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
 
 @Autonomous
 public class WeirdMainAuto extends AutoFunctions {
     public int ringstack;
+    private OpenCvCamera camera;
+    private RingStackPipeline pipeline = new RingStackPipeline();
 
     @Override
     public void runOpMode() {
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
+
+        camera.setViewportRenderer(OpenCvCamera.ViewportRenderer.GPU_ACCELERATED);
+        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        {
+            @Override
+            public void onOpened()
+            {
+                camera.setPipeline(pipeline);
+                camera.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
+            }
+        });
         super.runOpMode();
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
         Pose2d start = new Pose2d(-62, -5, Math.toRadians(0));
@@ -96,13 +115,6 @@ public class WeirdMainAuto extends AutoFunctions {
         }
 
         drive.followTrajectory(beginning);
-        /*
-        autoFirePowerShot();
-        drive.followTrajectory(pshot2);
-        autoFirePowerShot();
-        drive.followTrajectory(pshot3);
-        autoFirePowerShot();
-         */
 
         if (ringstack == 0) {
             drive.followTrajectory(wobblea);
@@ -121,5 +133,17 @@ public class WeirdMainAuto extends AutoFunctions {
         PoseStorage.globalPose = drive.getPoseEstimate();
 
         // drive.followTrajectory(end);
+    }
+    private int getRingStack() {
+        int ringStackSize = pipeline.getRingStack();
+        if (ringStackSize == 0) {
+            telemetry.addData("Ring Stack", "Zero");
+        } else if (ringStackSize == 1) {
+            telemetry.addData("Ring Stack", "One");
+        } else if (ringStackSize == 4) {
+            telemetry.addData("Ring Stack", "Four");
+        }
+        telemetry.update();
+        return ringStackSize;
     }
 }

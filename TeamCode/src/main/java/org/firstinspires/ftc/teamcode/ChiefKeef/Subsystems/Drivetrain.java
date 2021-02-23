@@ -28,7 +28,6 @@ public class Drivetrain {
     public static double I = 0;
     public static double D = 0;
     public static double rsGain = 3;
-    public static double deadRange = 0.2;
 
     private boolean stopCorrection = false;
 
@@ -151,21 +150,13 @@ public class Drivetrain {
         telemetry.addData("Read angle", angles.firstAngle);
         telemetry.addData("Desired Angle", desiredAngle);
 
-        /*
-        if (correctionBuffer.time() > 1) {
-            stopCorrection = false;
-        }
-         */
-
         if (g1rx != 0) {
             FL_power_raw = -newForward + newStrafe + g1rx;
             FR_power_raw = -newForward - newStrafe - g1rx;
             RL_power_raw = -newForward - newStrafe + g1rx;
             RR_power_raw = -newForward + newStrafe - g1rx;
             desiredAngle = angles.firstAngle;
-            //stopCorrection = true;
-            //correctionBuffer.reset();
-        } else {//if (stopCorrection == false) {
+        } else {
             FL_power_raw = -newForward + newStrafe - rcw;
             FR_power_raw = -newForward - newStrafe + rcw;
             RL_power_raw = -newForward - newStrafe - rcw;
