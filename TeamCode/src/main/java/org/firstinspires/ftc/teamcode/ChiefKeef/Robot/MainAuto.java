@@ -22,27 +22,11 @@ public class MainAuto extends AutoFunctions {
 
         drive.setPoseEstimate(start);
 
-        /*
-        Trajectory beginning = drive.trajectoryBuilder(start)
-                .splineTo(new Vector2d(-3.25, 23.5), Math.toRadians(0))
-                .build();
-         */
         Trajectory beginning = drive.trajectoryBuilder(start)
                 .splineTo(new Vector2d(-27.25, 8.5), 0)
                 .splineTo(new Vector2d(-3.25, -12), 0)
                 .build();
 
-        /*
-        Trajectory pshot2 = drive.trajectoryBuilder(beginning.end())
-                .strafeTo(new Vector2d(-3.25, 16))
-                .build();
-
-        Trajectory pshot3 = drive.trajectoryBuilder(pshot2.end())
-                .strafeTo(new Vector2d(-3.25, 8.5))
-                .build();
-
-
-         */
         Trajectory wobblea = drive.trajectoryBuilder(beginning.end())
                 .splineTo(new Vector2d(5.5, -22.5), Math.toRadians(90))
                 .build();
@@ -54,7 +38,6 @@ public class MainAuto extends AutoFunctions {
         Trajectory wobblec = drive.trajectoryBuilder(beginning.end())
                 .splineTo(new Vector2d(54.5, -23), Math.toRadians(90))
                 .build();
-
 
         Trajectory enda = drive.trajectoryBuilder(wobblea.end())
                 .lineToConstantHeading(new Vector2d(5.5, 0))

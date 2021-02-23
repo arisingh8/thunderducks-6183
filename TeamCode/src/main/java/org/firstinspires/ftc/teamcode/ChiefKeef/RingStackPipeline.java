@@ -59,7 +59,7 @@ public class RingStackPipeline extends OpenCvPipeline {
         Core.inRange(input, lower, upper, mask);
         Core.bitwise_and(input, input, result, mask);
 
-        Imgproc.cvtColor(result, result, Imgproc.COLOR_YCrCb2RGB);
+        Imgproc.cvtColor(result, result, Imgproc.COLOR_HSV2RGB);
 
         Imgproc.cvtColor(result, result, Imgproc.COLOR_RGB2GRAY);
         Imgproc.blur(result, result, new Size(3, 3));
