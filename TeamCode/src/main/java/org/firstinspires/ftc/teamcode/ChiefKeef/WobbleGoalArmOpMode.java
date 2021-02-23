@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ChiefKeef;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -34,11 +35,12 @@ public class WobbleGoalArmOpMode extends LinearOpMode {
             arm.setPower(0);
         }
         if (gamepad1.right_bumper) {
-            claw.setPosition(claw.getPosition()+0.05);
+            claw.setPosition(0);
         }
         if (gamepad1.right_trigger>0.5) {
-            claw.setPosition(claw.getPosition()-0.05);
+            claw.setPosition(0.5);
         }
         telemetry.addData("Claw position", claw.getPosition());
+        telemetry.update();
     }
 }

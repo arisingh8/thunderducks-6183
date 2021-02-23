@@ -20,17 +20,17 @@ public class Shooter {
     private double g1rt, g1lt;
     private boolean g1rb;
 
-    private int shotCount = 1, powerShotCount = 1;
+    public static int shotCount = 1, powerShotCount = 1;
     private boolean powerfiring = false, standardfiring = false, override = false;
-    private final double[] shotPower = {-0.98, -0.95, -0.95}, powerShotPower = {-0.95, -0.93, -0.93};
-    private final double[] shotRevs = {5400, 5400, 5400}, powerShotRevs = {4800, 4800, 4800};
+    private final double[] shotPower = {-1, -0.98, -0.98}, powerShotPower = {-0.95, -0.93, -0.93};
+    private final double[] shotRevs = {5300, 5200, 5200}, powerShotRevs = {4800, 4800, 4800};
 
     public ElapsedTime eTime = new ElapsedTime();
 
-    public static double multiplier = 1.7;
-    public static double firingTime = 0.4;
-    public static double waitingTime = 0.5;
-    private double targetRPM = multiplier * 120 * (PoseStorage.distanceToGoal+1.806) / Math.PI*0.04128;
+    public static double firingTime = 0.15;
+    public static double waitingTime = 0.35;
+    public static double servoStartPos = 0.15;
+    public static double servoFirePos = 0.4;
 
     public enum firePos {
         READY,
@@ -45,7 +45,7 @@ public class Shooter {
         servo = hardwareMap.get(Servo.class, "servo");
 
         flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
-        servo.setPosition(0.15);
+        servo.setPosition(servoStartPos);
 
         flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
@@ -54,7 +54,6 @@ public class Shooter {
 
     public void controls() {
         double rpm = flywheel_reader.readCycle();
-        targetRPM = multiplier * 120 * (PoseStorage.distanceToGoal+1.806) / Math.PI*0.04128;
         telemetry.addData("Shooter RPM", rpm);
 
         launchEm(rpm);
@@ -111,9 +110,9 @@ public class Shooter {
                 }
                 break;
             case FIRING:
-                servo.setPosition(0.5);
+                servo.setPosition(servoFirePos);
                 if (eTime.time() > firingTime) {
-                    servo.setPosition(0);
+                    servo.setPosition(servoStartPos);
                     servoState = firePos.WAITING;
                 }
                 break;

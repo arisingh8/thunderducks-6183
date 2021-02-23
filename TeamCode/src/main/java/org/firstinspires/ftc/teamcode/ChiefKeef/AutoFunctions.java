@@ -27,6 +27,11 @@ public class AutoFunctions extends LinearOpMode {
 
     RingStackPipeline pipeline = new RingStackPipeline();
 
+    private double firingTime = 0.15;
+    private double waitingTime = 0.35;
+    private double servoStartPos = 0.15;
+    private double servoFirePos = 0.4;
+
     private enum autofirePos {
         READY,
         FIRING,
@@ -41,8 +46,14 @@ public class AutoFunctions extends LinearOpMode {
         EXTENDED,
         DROPPED
     }
+    private enum pickUpGoalPos {
+        READY,
+        EXTENDED,
+        GRABBED
+    }
     private wobbleGoalPos wobbleState = wobbleGoalPos.READY;
-    public boolean dropped = false;
+    private pickUpGoalPos pickUpState = pickUpGoalPos.READY;
+    private boolean dropped = false, pickedUp = false;
 
     ElapsedTime eTime = new ElapsedTime();
 
@@ -55,7 +66,7 @@ public class AutoFunctions extends LinearOpMode {
         servo = hardwareMap.get(Servo.class, "servo");
 
         flywheel_reader = new EncoderReader(flywheel, 28, 0.1);
-        servo.setPosition(0.15);
+        servo.setPosition(servoStartPos);
 
         flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
@@ -72,40 +83,10 @@ public class AutoFunctions extends LinearOpMode {
 
         claw.setPosition(0);
 
-        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
-
-        camera.setViewportRenderer(OpenCvCamera.ViewportRenderer.GPU_ACCELERATED);
-        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
-        {
-            @Override
-            public void onOpened()
-            {
-                camera.setPipeline(pipeline);
-                camera.startStreaming(640, 480, OpenCvCameraRotation.UPRIGHT);
-            }
-        });
-
         eTime.reset();
 
         telemetry.addLine("Robot initialized.");
         telemetry.update();
-    }
-
-    public int getRingStack() {
-        while (!isStarted()) {
-            if (pipeline.getRingStack() == 0) {
-                telemetry.addData("Ring Stack", "Zero");
-            } else if (pipeline.getRingStack() == 1) {
-                telemetry.addData("Ring Stack", "One");
-            } else if (pipeline.getRingStack() == 4) {
-                telemetry.addData("Ring Stack", "Four");
-            } else {
-                telemetry.addData("Ring Stack", pipeline.getRingStack());
-            }
-            telemetry.update();
-        }
-        return pipeline.getRingStack();
     }
 
     public void firePowerShot() {
@@ -148,6 +129,7 @@ public class AutoFunctions extends LinearOpMode {
         //flywheel.setPower(0);
     }
 
+    public void turnOnFlywheel() { flywheel.setPower(-1); }
     public void turnOffFlywheel() {
         flywheel.setPower(0);
     }
@@ -168,14 +150,14 @@ public class AutoFunctions extends LinearOpMode {
                 }
                 break;
             case FIRING:
-                servo.setPosition(0.5);
-                if (eTime.time() > 0.5) {
-                    servo.setPosition(0);
+                servo.setPosition(servoFirePos);
+                if (eTime.time() > firingTime) {
+                    servo.setPosition(servoStartPos);
                     servoState = autofirePos.WAITING;
                 }
                 break;
             case WAITING:
-                if (eTime.time() > 0.75) {
+                if (eTime.time() > waitingTime) {
                     servoState = autofirePos.READY;
                     normalfired = true;
                 }
@@ -220,14 +202,14 @@ public class AutoFunctions extends LinearOpMode {
                 wobbleState = wobbleGoalPos.EXTENDED;
                 break;
             case EXTENDED:
-                if (Math.abs(arm.getCurrentPosition() - 2632) < 20) {
+                if (Math.abs(arm.getCurrentPosition() - 2632) < 200) {
                     setWobbleClawState(false);
                     wobbleState = wobbleGoalPos.DROPPED;
                     eTime.reset();
                 }
                 break;
             case DROPPED:
-                if (eTime.time() > 1) {
+                if (eTime.time() > 0.5) {
                     setWobbleArmState(0);
                     if (arm.getCurrentPosition() < 600) {
                         setWobbleClawState(true);
@@ -239,11 +221,44 @@ public class AutoFunctions extends LinearOpMode {
         }
     }
 
+    public void pickUpWobbleGoal() {
+        switch (pickUpState) {
+            case READY:
+                setWobbleArmState(3);
+                if (arm.getCurrentPosition() > 600) {
+                    setWobbleClawState(false);
+                    pickUpState = pickUpGoalPos.EXTENDED;
+                }
+                break;
+            case EXTENDED:
+                if (Math.abs(arm.getCurrentPosition() - 2632) < 20) {
+                    setWobbleClawState(true);
+                    pickUpState = pickUpGoalPos.GRABBED;
+                    eTime.reset();
+                }
+                break;
+            case GRABBED:
+                //if (eTime.time() > 1) {
+                  //  setWobbleArmState(0);
+                    pickedUp = true;
+                    pickUpState = pickUpGoalPos.READY;
+                //}
+                break;
+        }
+    }
+
     public void autoDropWobbleGoal() {
         while (!dropped) {
             dropWobbleGoal();
         }
         dropped = false;
+    }
+
+    public void autoPickUpWobbleGoal() {
+        while (!pickedUp) {
+            pickUpWobbleGoal();
+        }
+        pickedUp = false;
     }
 
     public void turnOnIntake() {
@@ -254,9 +269,5 @@ public class AutoFunctions extends LinearOpMode {
     public void turnOffIntake() {
         intakeMotor1.setPower(0);
         intakeMotor2.setPower(0);
-    }
-
-    public void closeCamera() {
-        camera.closeCameraDevice();
     }
 }
