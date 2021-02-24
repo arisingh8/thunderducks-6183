@@ -26,7 +26,7 @@ public class Drivetrain {
     public static double P = 0.04;
     public static double I = 0;
     public static double D = 0;
-    // public static double rsGain = 3;
+    public static double rsGain = 3;
 
     private double integral, previous_error = 0;
 
@@ -124,7 +124,7 @@ public class Drivetrain {
                 desiredAngle = 90;
             }
         }
-        // desiredAngle = desiredAngle + -(rsGain * g1rx);
+        desiredAngle = desiredAngle + -(rsGain * g1rx);
         if (desiredAngle < -180) {
             desiredAngle += 360;
         } else if (desiredAngle > 180) {
@@ -158,7 +158,7 @@ public class Drivetrain {
         telemetry.addData("Read angle", angles.firstAngle);
         telemetry.addData("Desired Angle", desiredAngle);
 
-        if (desiredAngle != cachedDesiredAngle) {
+        if (desiredAngle != cachedDesiredAngle || g1rx > 0.7) {
             driveState = driveMode.AUTO_CONTROL;
         } else {
             driveState = driveMode.DRIVER_CONTROLLED;
@@ -175,6 +175,7 @@ public class Drivetrain {
                 FR_power_raw = -newForward - newStrafe - g1rx;
                 RL_power_raw = -newForward - newStrafe + g1rx;
                 RR_power_raw = -newForward + newStrafe - g1rx;
+                desiredAngle = angles.firstAngle;
         }
 
         /*

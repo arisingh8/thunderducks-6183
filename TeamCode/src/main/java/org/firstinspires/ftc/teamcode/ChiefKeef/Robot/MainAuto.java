@@ -73,7 +73,6 @@ public class MainAuto extends AutoFunctions {
                 .lineToConstantHeading(new Vector2d(-26.5, -28.5))
                 .build();
 
-        waitForStart();
         RingStackPipeline.ringstackTime.reset();
         ringstack = getRingStack();
         while (ringstack == -1) {
@@ -119,6 +118,9 @@ public class MainAuto extends AutoFunctions {
                     .splineToConstantHeading(new Vector2d(54.5, -23), Math.toRadians(90))
                     .build();
         }
+
+        waitForStart();
+        if (isStopRequested()) return;
 
         Trajectory wobblePickUp2 = drive.trajectoryBuilder(wobblePickUp.end())
                 .lineToConstantHeading(new Vector2d(-57, -26))
