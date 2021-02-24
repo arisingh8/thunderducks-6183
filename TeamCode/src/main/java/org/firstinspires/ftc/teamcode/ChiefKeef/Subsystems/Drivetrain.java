@@ -12,7 +12,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
 
 @Config
 public class Drivetrain {
@@ -27,9 +26,7 @@ public class Drivetrain {
     public static double P = 0.04;
     public static double I = 0;
     public static double D = 0;
-    public static double rsGain = 3;
-
-    private boolean stopCorrection = false;
+    // public static double rsGain = 3;
 
     private double integral, previous_error = 0;
 
@@ -42,20 +39,23 @@ public class Drivetrain {
 
     private double error;
     private double errorMin;
-    private double desiredAngle;
-    private int count = 0;
+    private double desiredAngle = 0, cachedDesiredAngle = 0;
+
+    private enum driveMode {
+        DRIVER_CONTROLLED,
+        AUTO_CONTROL
+    }
+
+    private driveMode driveState = driveMode.DRIVER_CONTROLLED;
 
     private final ElapsedTime eTime = new ElapsedTime();
-    private final ElapsedTime correctionBuffer = new ElapsedTime();
-    private double[] turnList = {0, 90, 180, 270};
 
     public void init(HardwareMap hardwareMap) {
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
         parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.calibrationDataFile = "AdafruitIMUCalibration.json"; // see the calibration sample op mode
+        parameters.calibrationDataFile = "AdafruitIMUCalibration.json";
         parameters.mode = BNO055IMU.SensorMode.IMU;
-        // parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
 
         frMotor = hardwareMap.get(DcMotor.class, "frMotor");
         rrMotor = hardwareMap.get(DcMotor.class, "rrMotor");
@@ -77,7 +77,7 @@ public class Drivetrain {
 
     public void controls() {
         holonomicFormula();
-        setDriveChainPower();
+        eTime.reset();
     }
 
     public void drive(double g1lx, double g1ly, double g1rx, boolean g1lb, boolean g1rb, boolean g1dl,
@@ -111,12 +111,20 @@ public class Drivetrain {
         newStrafe = -this.g1ly * Math.sin(gyro_radians) + this.g1lx * Math.cos(gyro_radians);
 
         if (!g1rb) {
-            if (g1du) { desiredAngle = 0; }
-            if (g1dr) { desiredAngle = 270;}
-            if (g1dd) { desiredAngle = 180;}
-            if (g1dl) { desiredAngle = 90;}
+            if (g1du) {
+                desiredAngle = 0;
+            }
+            if (g1dr) {
+                desiredAngle = 270;
+            }
+            if (g1dd) {
+                desiredAngle = 180;
+            }
+            if (g1dl) {
+                desiredAngle = 90;
+            }
         }
-        desiredAngle = desiredAngle + -(rsGain * g1rx);
+        // desiredAngle = desiredAngle + -(rsGain * g1rx);
         if (desiredAngle < -180) {
             desiredAngle += 360;
         } else if (desiredAngle > 180) {
@@ -139,7 +147,7 @@ public class Drivetrain {
 
         telemetry.addData("Turn Error", error);
 
-        integral += (error * time); // Integral is increased by the error*time (which is .02 seconds using normal IterativeRobot)
+        integral += (error * time);
         eTime.reset();
 
         double derivative = (error - previous_error) / time;
@@ -150,6 +158,26 @@ public class Drivetrain {
         telemetry.addData("Read angle", angles.firstAngle);
         telemetry.addData("Desired Angle", desiredAngle);
 
+        if (desiredAngle != cachedDesiredAngle) {
+            driveState = driveMode.AUTO_CONTROL;
+        } else {
+            driveState = driveMode.DRIVER_CONTROLLED;
+        }
+
+        switch (driveState) {
+            case AUTO_CONTROL:
+                FL_power_raw = -newForward + newStrafe - rcw;
+                FR_power_raw = -newForward - newStrafe + rcw;
+                RL_power_raw = -newForward - newStrafe - rcw;
+                RR_power_raw = -newForward + newStrafe + rcw;
+            case DRIVER_CONTROLLED:
+                FL_power_raw = -newForward + newStrafe + g1rx;
+                FR_power_raw = -newForward - newStrafe - g1rx;
+                RL_power_raw = -newForward - newStrafe + g1rx;
+                RR_power_raw = -newForward + newStrafe - g1rx;
+        }
+
+        /*
         if (g1rx != 0) {
             FL_power_raw = -newForward + newStrafe + g1rx;
             FR_power_raw = -newForward - newStrafe - g1rx;
@@ -162,6 +190,7 @@ public class Drivetrain {
             RL_power_raw = -newForward - newStrafe - rcw;
             RR_power_raw = -newForward + newStrafe + rcw;
         }
+         */
 
         FL_power = Range.clip(FL_power_raw, -1, 1);
         FR_power = Range.clip(FR_power_raw, -1, 1);
@@ -174,9 +203,9 @@ public class Drivetrain {
             RL_power /= 4;
             RR_power /= 4;
         }
-    }
 
-    public void setDriveChainPower() {
+        cachedDesiredAngle = desiredAngle;
+
         flMotor.setPower(-FL_power);
         frMotor.setPower(FR_power);
         rlMotor.setPower(-RL_power);

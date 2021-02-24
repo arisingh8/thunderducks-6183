@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.ChiefKeef.EncoderReader;
-import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
 
 @Config
 public class Shooter {

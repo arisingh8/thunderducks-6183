@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ChiefKeef.AutoFunctions;
-import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
 import org.firstinspires.ftc.teamcode.ChiefKeef.RingStackPipeline;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
 import org.openftc.easyopencv.OpenCvCamera;
@@ -129,8 +128,6 @@ public class WeirdMainAuto extends AutoFunctions {
             //autoDropWobbleGoal();
             //drive.followTrajectory(endc);
         }
-
-        PoseStorage.globalPose = drive.getPoseEstimate();
 
         // drive.followTrajectory(end);
     }

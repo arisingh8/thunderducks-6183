@@ -19,6 +19,9 @@ import java.util.List;
 
 @Config
 public class RingStackPipeline extends OpenCvPipeline {
+    /**
+     * This is the CV pipeline used by auto. It checks for either 0, 1, or 4 rings by measuring the aspect ratio of the bounding box of the largest orange countour.
+     */
 
     private int threshold = 50;
 
@@ -51,6 +54,9 @@ public class RingStackPipeline extends OpenCvPipeline {
     @Override
     public Mat processFrame(Mat input)
     {
+        cnt = new MatOfPoint2f();
+        List<MatOfPoint> contours = new ArrayList<>();
+
         Imgproc.cvtColor(input, input, Imgproc.COLOR_RGB2HSV);
 
         // Threshold of orange in HSV space
@@ -66,11 +72,7 @@ public class RingStackPipeline extends OpenCvPipeline {
         Imgproc.blur(result, result, new Size(3, 3));
 
         Imgproc.Canny(result, cnt, threshold, threshold * 3);
-        List<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(cnt, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
-
-        // result = Mat.zeros(result.size(), CvType.CV_8UC3);
-        // Imgproc.drawContours(result, contours, -1, color, 2, Imgproc.LINE_8, hierarchy, 0, new Point());
 
         for (int i = 0; i < contours.size(); i++) {
             Rect contourArea = Imgproc.boundingRect(contours.get(i));
@@ -86,7 +88,7 @@ public class RingStackPipeline extends OpenCvPipeline {
         aspectRatio = Double.valueOf(maxRect.width)/Double.valueOf(maxRect.height);
 
         Imgproc.putText(result, String.valueOf(aspectRatio), new Point(maxRect.x + maxRect.width, maxRect.y + maxRect.height), Imgproc.FONT_HERSHEY_COMPLEX, 0.5, color);
-        // Imgproc.drawContours(input, contours, maxValIdx, new Scalar(0, 255, 0), 2, Imgproc.LINE_8, hierarchy, 0, new Point());
+        Imgproc.drawContours(input, contours, maxValIdx, new Scalar(0, 255, 0), 2, Imgproc.LINE_8, hierarchy, 0, new Point());
         Imgproc.rectangle(result, maxRect, color);
 
         return result;

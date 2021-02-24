@@ -7,15 +7,11 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.teamcode.ChiefKeef.AutoFunctions;
-import org.firstinspires.ftc.teamcode.ChiefKeef.PoseStorage;
 import org.firstinspires.ftc.teamcode.ChiefKeef.RingStackPipeline;
 import org.firstinspires.ftc.teamcode.drive.SampleMecanumDrive;
-import org.opencv.core.MatOfPoint;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
-
-import java.util.Vector;
 
 @Autonomous
 public class MainAuto extends AutoFunctions {
@@ -83,19 +79,6 @@ public class MainAuto extends AutoFunctions {
         while (ringstack == -1) {
             ringstack = getRingStack();
         }
-
-        /*
-        Trajectory ringPickUp = drive.trajectoryBuilder(wobbleb.end())
-                .splineToSplineHeading(new Pose2d(-16, -36.5, 0), Math.toRadians(180))
-                .addDisplacementMarker(() -> {
-                    turnOnIntake();
-                })
-                .splineToConstantHeading(new Vector2d(-30, -36.5), Math.toRadians(180))
-                .addDisplacementMarker(() -> {
-                    turnOffIntake();
-                })
-                .build();
-         */
 
         if (ringstack == 0) {
             wobblePickUp = drive.trajectoryBuilder(wobblea.end())
@@ -185,14 +168,6 @@ public class MainAuto extends AutoFunctions {
 
         autoDropWobbleGoal();
         System.out.println("vargas: 2nd wobble dropped");
-        /*
-        turnOnIntake();
-
-        drive.followTrajectory(ringPickUp2);
-        sleep(1000);
-        turnOffIntake();
-
-         */
 
         drive.followTrajectory(end);
         System.out.println("vargas: opmode is done");
